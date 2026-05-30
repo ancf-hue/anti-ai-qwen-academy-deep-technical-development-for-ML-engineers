@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anti-AI Qwen Academy — Курс ML-инженера</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <style>
+    :root {
+      --glass-bg: rgba(255,255,255,0.12);
+      --glass-border: rgba(255,255,255,0.25);
+      --accent: #00cec9;
+      --primary: #1a73e8;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .header { text-align: center; padding: 40px 20px; }
+    .header h1 { font-size: 2.5em; margin: 0 0 10px; }
+    .header p { opacity: 0.9; font-size: 1.2em; }
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    .block-title {
+      color: var(--accent);
+      font-size: 1.4em;
+      margin: 30px 0 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .block-title::before { content: "▍"; }
+    .lessons-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .lesson-link {
+      display: block;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      color: white;
+      text-decoration: none;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .lesson-link:hover {
+      background: rgba(255,255,255,0.2);
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    .lesson-link.completed { border-left: 3px solid var(--accent); }
+    .footer { text-align: center; padding: 40px 20px; opacity: 0.8; font-size: 0.9em; }
+    .badge { 
+      background: linear-gradient(135deg, #f093fb, #f5576c); 
+      padding: 4px 12px; 
+      border-radius: 20px; 
+      font-size: 0.85em; 
+      font-weight: 600;
+    }
+    @media (max-width: 600px) {
+      .lessons-grid { grid-template-columns: 1fr 1fr; }
+      .header h1 { font-size: 1.8em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="favicon.ico" alt="Логотип" style="width:60px;height:60px;border-radius:12px;background:rgba(255,255,255,0.2);padding:4px">
+      <h1>Anti-AI Qwen Academy</h1>
+      <p>Глубокая техническая разработка для ML-инженеров</p>
+      <span class="badge">🎓 25 уроков • Офлайн • Бесплатно</span>
+    </div>
+
+    <div class="glass-card">
+      <p style="margin:0;font-size:1.1em">
+        Полноценный курс по созданию математических архитектур нейросетей с нуля: 
+        от тензорной алгебры до деплоя LLM на кластерах GPU. 
+        Каждый урок — автономный HTML-файл с теорией, кодом и практикой.
+      </p>
+    </div>
+
+    <!-- Блок 1 -->
+    <div class="block-title">🔷 Блок 1: Математический фундамент</div>
+    <div class="lessons-grid">
+      <a href="lesson-01.html" class="lesson-link">Урок 1: Тензоры</a>
+      <a href="lesson-02.html" class="lesson-link">Урок 2: Autograd</a>
+      <a href="lesson-03.html" class="lesson-link">Урок 3: Оптимизаторы</a>
+      <a href="lesson-04.html" class="lesson-link">Урок 4: Loss Functions</a>
+      <a href="lesson-05.html" class="lesson-link">Урок 5: Регуляризация</a>
+    </div>
+
+    <!-- Блок 2 -->
+    <div class="block-title">🔷 Блок 2: Базовые архитектуры</div>
+    <div class="lessons-grid">
+      <a href="lesson-06.html" class="lesson-link">Урок 6: Linear</a>
+      <a href="lesson-07.html" class="lesson-link">Урок 7: Activation</a>
+      <a href="lesson-08.html" class="lesson-link">Урок 8: CNN</a>
+      <a href="lesson-09.html" class="lesson-link">Урок 9: RNN/LSTM</a>
+      <a href="lesson-10.html" class="lesson-link">Урок 10: DataLoader</a>
+    </div>
+
+    <!-- Блок 3 -->
+    <div class="block-title">🔷 Блок 3: Современные архитектуры</div>
+    <div class="lessons-grid">
+      <a href="lesson-11.html" class="lesson-link">Урок 11: Attention</a>
+      <a href="lesson-12.html" class="lesson-link">Урок 12: Multi-Head</a>
+      <a href="lesson-13.html" class="lesson-link">Урок 13: Transformer</a>
+      <a href="lesson-14.html" class="lesson-link">Урок 14: Diffusion</a>
+      <a href="lesson-15.html" class="lesson-link">Урок 15: VAE/GAN</a>
+    </div>
+
+    <!-- Блок 4 -->
+    <div class="block-title">🔷 Блок 4: Инженерия LLM</div>
+    <div class="lessons-grid">
+      <a href="lesson-16.html" class="lesson-link">Урок 16: Токенизация</a>
+      <a href="lesson-17.html" class="lesson-link">Урок 17: LoRA</a>
+      <a href="lesson-18.html" class="lesson-link">Урок 18: Квантование</a>
+      <a href="lesson-19.html" class="lesson-link">Урок 19: Генерация</a>
+      <a href="lesson-20.html" class="lesson-link">Урок 20: RLHF/DPO</a>
+    </div>
+
+    <!-- Блок 5 -->
+    <div class="block-title">🔷 Блок 5: Production</div>
+    <div class="lessons-grid">
+      <a href="lesson-21.html" class="lesson-link">Урок 21: Distributed</a>
+      <a href="lesson-22.html" class="lesson-link">Урок 22: Память/ZeRO</a>
+      <a href="lesson-23.html" class="lesson-link">Урок 23: Triton/CUDA</a>
+      <a href="lesson-24.html" class="lesson-link">Урок 24: torch.compile</a>
+      <a href="lesson-25.html" class="lesson-link">Урок 25: Деплой 🏁</a>
+    </div>
+
+    <div class="footer">
+      <p>© 2026 Anti-AI Qwen Academy • Бесплатный офлайн-курс</p>
+      <p><a href="https://ancf-hue.github.io/" target="_blank" style="color:var(--accent)">Каталог других проектов</a></p>
+    </div>
+  </div>
+</body>
+</html>
