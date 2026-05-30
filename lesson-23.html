@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 23: Введение в CUDA-программирование | Anti-AI Qwen Academy</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        /* --- Основные стили (идентичны предыдущим урокам) --- */
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --secondary: #6c5ce7;
+            --accent: #00cec9;
+            --glass-bg: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.25);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --text-primary: #ffffff;
+            --text-secondary: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --important-bg: rgba(59, 130, 246, 0.15);
+            --warning-bg: rgba(245, 158, 11, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
+
+        .header-container { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; margin-bottom: 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
+        .page-logo { width: 48px; height: 48px; border-radius: 12px; object-fit: contain; background: rgba(255, 255, 255, 0.2); padding: 4px; }
+        
+        h1 { color: white; font-size: 1.8em; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .subtitle { color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin-top: 4px; }
+        
+        h2 { color: white; margin: 32px 0 16px; font-size: 1.5em; display: flex; align-items: center; gap: 10px; }
+        h2::before { content: "▍"; color: var(--accent); }
+        h3 { color: rgba(255, 255, 255, 0.95); margin: 24px 0 12px; font-size: 1.2em; }
+        p { color: rgba(255, 255, 255, 0.95); margin-bottom: 16px; }
+        
+        code { font-family: "Fira Code", "Courier New", monospace; background: rgba(0, 0, 0, 0.25); padding: 2px 6px; border-radius: 6px; font-size: 0.95em; color: #fbbf24; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 12px; overflow-x: auto; margin: 16px 0; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9em; line-height: 1.5; }
+        pre code { background: transparent; padding: 0; color: inherit; }
+        
+        .important, .warning { padding: 16px 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid; backdrop-filter: blur(8px); }
+        .important { background: var(--important-bg); border-left-color: #3b82f6; color: #eff6ff; }
+        .warning { background: var(--warning-bg); border-left-color: #f59e0b; color: #fffbeb; }
+        .important strong, .warning strong { display: block; margin-bottom: 4px; font-size: 1.05em; color: white; }
+        
+        .formula { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); padding: 16px; border-radius: 12px; font-family: "Georgia", serif; font-style: italic; text-align: center; margin: 20px 0; color: white; font-size: 1.1em; backdrop-filter: blur(8px); }
+        
+        ul { padding-left: 24px; margin: 16px 0; }
+        li { margin-bottom: 10px; color: rgba(255, 255, 255, 0.95); }
+        li::marker { color: var(--accent); font-weight: bold; }
+        strong { color: white; }
+        
+        .btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0; justify-content: center; }
+        .btn-3d {
+            position: relative; padding: 14px 28px; font-size: 1em; font-weight: 600; color: white;
+            background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.15s ease; user-select: none;
+        }
+        .btn-3d:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15), 0 12px 28px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+        .btn-3d:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-3d.primary { background: linear-gradient(145deg, rgba(26,115,232,0.4), rgba(26,115,232,0.2)); border-color: rgba(26, 115, 232, 0.5); }
+        .btn-3d.success { background: linear-gradient(145deg, rgba(16,185,129,0.4), rgba(16,185,129,0.2)); border-color: rgba(16, 185, 129, 0.5); }
+        .btn-3d::after { content: ""; position: absolute; top: 4px; left: 4px; right: 4px; height: 40%; background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent); border-radius: 12px 12px 50% 50%; pointer-events: none; }
+
+        .progress-bar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(0, 0, 0, 0.15); border-radius: 12px; margin: 20px 0; }
+        .progress-bar span { color: white; font-weight: 500; }
+        .progress-track { flex: 1; height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--secondary)); border-radius: 4px; transition: width 1s ease; }
+        
+        .code-block-container { display: none; margin-top: 16px; animation: fadeIn 0.3s ease; }
+        .code-block-container.active { display: block; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .code-title { color: white; font-weight: 600; font-size: 0.95em; }
+        .copy-code-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8em; transition: all 0.2s; }
+        .copy-code-btn:hover { background: rgba(255,255,255,0.25); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .support-section { background: linear-gradient(145deg, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.15)); border: 2px solid rgba(236, 72, 153, 0.4); }
+        .support-header { text-align: center; margin-bottom: 24px; }
+        .support-header h2 { justify-content: center; font-size: 1.8em; margin-bottom: 8px; }
+        .support-header h2::before { content: "🤝"; margin-right: 10px; color: white; }
+        .heart-icon { font-size: 3em; text-align: center; margin: 16px 0; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .support-text { background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; margin: 16px 0; text-align: center; }
+        .phone-section { background: rgba(16, 185, 129, 0.15); border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; }
+        .phone-number { font-size: 1.8em; font-weight: bold; color: white; margin: 12px 0; font-family: "Fira Code", monospace; letter-spacing: 2px; }
+        .copy-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; margin: 8px; transition: all 0.2s; }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+        .support-features { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+        .feature-badge { background: rgba(16, 185, 129, 0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.85em; color: white; }
+        .catalog-link { background: linear-gradient(145deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; text-decoration: none; display: block; transition: all 0.3s; }
+        .catalog-link:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4); }
+        .catalog-link h3 { color: white; margin: 0 0 8px 0; font-size: 1.3em; }
+        .catalog-link p { color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 0.95em; }
+        .catalog-url { background: rgba(0, 0, 0, 0.3); padding: 8px 12px; border-radius: 8px; font-family: "Fira Code", monospace; font-size: 0.85em; color: #fbbf24; margin-top: 12px; display: inline-block; word-break: break-all; }
+        
+        .decorative-image { width: 100%; max-width: 600px; margin: 24px auto; display: block; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .glass-card { padding: 20px; border-radius: 16px; }
+            h1 { font-size: 1.5em; }
+            .btn-group { flex-direction: column; }
+            .btn-3d { width: 100%; justify-content: center; }
+            .phone-number { font-size: 1.4em; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Шапка -->
+    <div class="glass-card header-container">
+        <img src="favicon.ico" alt="Логотип" class="page-logo">
+        <div>
+            <h1>Урок 23: Введение в CUDA-программирование</h1>
+            <div class="subtitle">ML-инженер • Блок 5: Низкоуровневая оптимизация и Production</div>
+        </div>
+    </div>
+
+    <!-- Прогресс -->
+    <div class="glass-card progress-bar">
+        <span>Прогресс курса:</span>
+        <div class="progress-track"><div class="progress-fill"></div></div>
+        <span>23/25</span>
+    </div>
+
+    <!-- Введение -->
+    <div class="glass-card">
+        <p>Когда вы создаете совершенно новую математическую архитектуру или кастомную функцию активации, высокоуровневых операций PyTorch может оказаться недостаточно. Стандартный код выполняет каждую операцию (например, сложение, а затем умножение) как отдельный вызов к памяти GPU. Это перегружает шину памяти. На этом уроке мы поднимемся на уровень <strong>Senior ML-разработки</strong> и научимся писать кастомные ядра, выполняющиеся напрямую на физических потоках видеокарты.</p>
+
+        <div class="important">
+            <strong>🔑 Архитектура памяти и потоков GPU:</strong> 
+            Видеокарта обрабатывает данные силами тысяч ядер параллельно. Потоки (Threads) группируются в блоки (Blocks), которые образуют сетку (Grid). Главный инженерный секрет оптимизации — минимизировать обращения к медленной глобальной памяти видеокарты (HBM) и максимально использовать сверхбыструю разделяемую память (Shared Memory) внутри блока потоков, объединяя операции вместе (Operator Fusion).
+        </div>
+    </div>
+
+    <!-- Раздел 1 -->
+    <div class="glass-card">
+        <h2>1. Индустриальный сдвиг: От сырого C++/CUDA к OpenAI Triton</h2>
+        <p>Исторически кастомные ядра писались на C++ с расширениями CUDA, что требовало ручного управления регистрами, синхронизацией потоков (warps) и борьбы с утечками памяти. Современный золотой стандарт в ML-инженерии — язык <strong>OpenAI Triton</strong>. Он позволяет писать код на чистом Python, который компилируется в максимально производительные низкоуровневые ядра LLVM/CUDA, превосходящие ручной C++ код за счет автоматической оптимизации планирования блоков памяти.</p>
+    </div>
+
+    <!-- Раздел 2 -->
+    <div class="glass-card">
+        <h2>2. Написание кастомного ядра поэлементного сложения векторов на Triton</h2>
+        <p>Реализуем на Triton параллельное ядро, которое складывает два гигантских вектора. Каждый поток видеокарты будет обрабатывать один свой блок данных.</p>
+
+        <pre><code>import torch
+import triton
+import triton.language as tl
+
+@triton.jit
+def add_kernel(x_ptr, y_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
+    # x_ptr, y_ptr, output_ptr — указатели на первый элемент массивов в памяти GPU
+    
+    # Находим глобальный ID блока потоков, который выполняет эту программу
+    pid = tl.program_id(axis=0)
+    
+    # Вычисляем диапазон индексов элементов, за которые отвечает данный блок
+    block_start = pid * BLOCK_SIZE
+    offsets = block_start + tl.arange(0, BLOCK_SIZE)
+    
+    # Создаем бинарную маску, защищающую от выхода за границы массива
+    mask = offsets < n_elements
+    
+    # Загружаем данные из медленной глобальной памяти GPU в быстрые регистры ядра
+    x = tl.load(x_ptr + offsets, mask=mask)
+    y = tl.load(y_ptr + offsets, mask=mask)
+    
+    # Производим математическую операцию параллельно на аппаратном уровне
+    output = x + y
+    
+    # Записываем результат обратно в глобальную память GPU
+    tl.store(output_ptr + offsets, output, mask=mask)
+
+def triton_vector_add(x: torch.Tensor, y: torch.Tensor):
+    # Обертка для вызова ядра из стандартного Python-кода
+    output = torch.empty_like(x)
+    assert x.is_cuda and y.is_cuda and output.is_cuda
+    
+    n_elements = x.numel()
+    
+    # Задаем размер блока (сколько элементов обрабатывает один программный блок)
+    BLOCK_SIZE = 1024
+    
+    # Рассчитываем размер сетки грида (сколько всего блоков нужно запустить)
+    grid = lambda meta: (triton.cdiv(n_elements, meta['BLOCK_SIZE']),)
+    
+    # Запуск ядра напрямую на GPU
+    add_kernel[grid](x, y, output, n_elements, BLOCK_SIZE=BLOCK_SIZE)
+    
+    return output
+
+# Проверка производительности ядра
+x_gpu = torch.randn(1000000, device='cuda')
+y_gpu = torch.randn(1000000, device='cuda')
+
+# Тестируем кастомное ядро
+res_triton = triton_vector_add(x_gpu, y_gpu)
+res_pytorch = x_gpu + y_gpu
+
+# Проверяем математическую точность совпадения результатов
+assert torch.allclose(res_triton, res_pytorch)
+print("Кастомное ядро Triton успешно выполнено и выдало абсолютно точный результат!")</code></pre>
+    </div>
+
+    <!-- Раздел 3 -->
+    <div class="glass-card">
+        <h2>3. Зачем нужен Operator Fusion (Слияние операторов)?</h2>
+        <p>Представьте операцию внутри трансформера: <code>out = Dropout(GeLU(LayerNorm(X)))</code>. В стандартном PyTorch данные трижды гоняются туда-обратно из регистров процессора в глобальную память VRAM. Написав кастомное ядро Fusion, мы загружаем блок данных <code>X</code> в локальную память потоков видеокарты <em>один раз</em>, последовательно применяем нормализацию, активацию, дропаут прямо внутри чипа и возвращаем в VRAM только готовый результат. Это убирает задержки шины и ускоряет инференс в несколько раз.</p>
+
+        <div class="warning">
+            <strong>⚠️ Ограничение отладки ядер:</strong> 
+            Обычные инструменты отладки Python (вроде <code>pdb</code> или <code>print</code>) не работают внутри скомпилированных GPU-ядер. Ошибка в индексах внутри ядра может привести к падению драйвера видеокарты с ошибкой <code>CUDA error: an illegal memory access was encountered</code>. При написании ядер всегда проверяйте граничные маски.
+        </div>
+    </div>
+
+    <!-- Практика с РАБОТАЮЩИМИ кнопками -->
+    <div class="glass-card">
+        <h2>🎯 Практическое задание</h2>
+        <p>Используя представленный шаблон кода <code>add_kernel</code>, напишите кастомное ядро Triton для вычисления <strong>функции активации ReLU</strong> (зануление отрицательных элементов). Оберните его в функцию <code>triton_relu(x)</code>, протестируйте на случайном тензоре и сравните скорость выполнения вашего ядра со стандартным <code>torch.relu(x)</code> на очень большом массиве данных (например, 50 000 000 элементов). Зафиксируйте разницу в пропускной способности памяти.</p>
+        
+        <div class="btn-group">
+            <button class="btn-3d primary" onclick="toggleBlock('template-cuda', this)">💻 Открыть шаблон кода</button>
+            <button class="btn-3d success" onclick="toggleBlock('solution-cuda', this)">✅ Показать решение</button>
+            <button class="btn-3d" onclick="toggleBlock('theory-cuda', this)">📚 Теория: Memory Hierarchy GPU</button>
+        </div>
+
+        <!-- Блок 1: Шаблон -->
+        <div id="template-cuda" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title"> Шаблон (triton_relu_kernel.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-template-cuda')">📋 Копировать</button>
+            </div>
+            <pre id="code-template-cuda"><code>import torch
+import triton
+import triton.language as tl
+import time
+
+@triton.jit
+def relu_kernel(x_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
+    """
+    Кастомное ядро Triton для вычисления ReLU: output = max(0, x)
+    """
+    # ВАШ КОД ЗДЕСЬ:
+    # 1. Получите pid блока (tl.program_id)
+    # 2. Вычислите offsets для элементов этого блока
+    # 3. Создайте маску для защиты от выхода за границы
+    # 4. Загрузите данные из глобальной памяти (tl.load)
+    # 5. Примените ReLU: tl.maximum(x, 0) или tl.where(x > 0, x, 0)
+    # 6. Сохраните результат обратно (tl.store)
+    pass
+
+def triton_relu(x: torch.Tensor):
+    """Обертка для вызова ReLU-ядра из Python"""
+    output = torch.empty_like(x)
+    assert x.is_cuda
+    
+    n_elements = x.numel()
+    BLOCK_SIZE = 1024
+    grid = lambda meta: (triton.cdiv(n_elements, meta['BLOCK_SIZE']),)
+    
+    # Запуск ядра
+    relu_kernel[grid](x, output, n_elements, BLOCK_SIZE=BLOCK_SIZE)
+    return output
+
+# Тестирование и бенчмарк
+if __name__ == "__main__":
+    # Создаем большой тензор для теста
+    size = 50_000_000
+    x = torch.randn(size, device='cuda')
+    
+    # Прогрев
+    _ = triton_relu(x)
+    _ = torch.relu(x)
+    
+    # Замер времени для Triton
+    torch.cuda.synchronize()
+    start = time.perf_counter()
+    res_triton = triton_relu(x)
+    torch.cuda.synchronize()
+    time_triton = time.perf_counter() - start
+    
+    # Замер времени для PyTorch
+    torch.cuda.synchronize()
+    start = time.perf_counter()
+    res_torch = torch.relu(x)
+    torch.cuda.synchronize()
+    time_torch = time.perf_counter() - start
+    
+    # Проверка точности и вывод результатов
+    assert torch.allclose(res_triton, res_torch)
+    print(f"Triton: {time_triton*1000:.2f} ms")
+    print(f"PyTorch: {time_torch*1000:.2f} ms")
+    print(f"Speedup: {time_torch/time_triton:.2f}x")</code></pre>
+        </div>
+
+        <!-- Блок 2: Решение -->
+        <div id="solution-cuda" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">✅ Готовое решение (triton_relu_solution.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-solution-cuda')">📋 Копировать</button>
+            </div>
+            <pre id="code-solution-cuda"><code>import torch
+import triton
+import triton.language as tl
+import time
+
+@triton.jit
+def relu_kernel(x_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
+    pid = tl.program_id(axis=0)
+    block_start = pid * BLOCK_SIZE
+    offsets = block_start + tl.arange(0, BLOCK_SIZE)
+    mask = offsets < n_elements
+    
+    # Загружаем данные
+    x = tl.load(x_ptr + offsets, mask=mask)
+    
+    # Применяем ReLU: max(0, x)
+    output = tl.maximum(x, 0)
+    
+    # Сохраняем результат
+    tl.store(output_ptr + offsets, output, mask=mask)
+
+def triton_relu(x: torch.Tensor):
+    output = torch.empty_like(x)
+    assert x.is_cuda
+    
+    n_elements = x.numel()
+    BLOCK_SIZE = 1024
+    grid = lambda meta: (triton.cdiv(n_elements, meta['BLOCK_SIZE']),)
+    
+    relu_kernel[grid](x, output, n_elements, BLOCK_SIZE=BLOCK_SIZE)
+    return output
+
+if __name__ == "__main__":
+    size = 50_000_000
+    x = torch.randn(size, device='cuda')
+    
+    # Прогрев
+    _ = triton_relu(x)
+    _ = torch.relu(x)
+    
+    # Бенчмарк Triton
+    torch.cuda.synchronize()
+    start = time.perf_counter()
+    res_triton = triton_relu(x)
+    torch.cuda.synchronize()
+    time_triton = time.perf_counter() - start
+    
+    # Бенчмарк PyTorch
+    torch.cuda.synchronize()
+    start = time.perf_counter()
+    res_torch = torch.relu(x)
+    torch.cuda.synchronize()
+    time_torch = time.perf_counter() - start
+    
+    # Результаты
+    assert torch.allclose(res_triton, res_torch)
+    
+    # Пропускная способность памяти (ГБ/с)
+    bytes_processed = size * 4 * 2  # read + write, float32 = 4 bytes
+    bw_triton = (bytes_processed / 1e9) / time_triton
+    bw_torch = (bytes_processed / 1e9) / time_torch
+    
+    print(f"=== Результаты бенчмарка ===")
+    print(f"Размер тензора: {size:,} элементов")
+    print(f"Triton: {time_triton*1000:.2f} ms | {bw_triton:.1f} GB/s")
+    print(f"PyTorch: {time_torch*1000:.2f} ms | {bw_torch:.1f} GB/s")
+    print(f"Speedup: {time_torch/time_triton:.2f}x")
+    print(f"Точность: ✅ Все значения совпадают")</code></pre>
+        </div>
+
+        <!-- Блок 3: Теория -->
+        <div id="theory-cuda" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">📚 Memory Hierarchy GPU: От регистров до HBM</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; color: rgba(255,255,255,0.95);">
+                <h3 style="margin-top: 0; color: white;">Иерархия памяти в GPU (от быстрой к медленной):</h3>
+                
+                <ul style="margin-left: 20px;">
+                    <li><strong>🔹 Registers (~1 TB/s):</strong> Самая быстрая память, приватная для каждого потока. Хранит локальные переменные ядра. Ограниченное количество (~255 регистров на поток).</li>
+                    <li><strong>🔹 Shared Memory (~80 TB/s):</strong> Разделяемая память внутри одного блока потоков (до 164 КБ на SM в H100). Ключ к оптимизации: загружаем данные из HBM один раз в Shared Memory, потом многократно используем.</li>
+                    <li><strong>🔹 L1/L2 Cache:</strong> Автоматическое кэширование глобальных обращений. Прозрачно для программиста, но поведение можно тонко настраивать.</li>
+                    <li><strong>🔹 HBM (High Bandwidth Memory, ~3 TB/s):</strong> Глобальная память видеокарты. Самая медленная из перечисленных, но самая ёмкая (до 80-141 ГБ в H100/H200). Все тензоры живут здесь.</li>
+                </ul>
+
+                <div class="important" style="margin-top: 16px;">
+                    <strong>💡 Почему Triton эффективнее ручного CUDA?</strong> 
+                    Triton автоматически: 1) Оптимизирует размещение данных между регистрами и Shared Memory; 2) Генерирует оптимальные инструкции загрузки/сохранения; 3) Планирует выполнение блоков для максимизации occupancy. Вы пишете высокоуровневый код — компилятор делает низкоуровневую магию.
+                </div>
+                
+                <h4 style="margin-top: 20px; color: white;">🔑 Правило оптимизации:</h4>
+                <p style="margin-left: 20px;"><em>"Каждое обращение к глобальной памяти (HBM) должно приносить максимум полезных данных для вычислений."</em> Именно поэтому мы используем большие BLOCK_SIZE и объединяем операции (Fusion) — чтобы загрузить данные один раз и сделать с ними всё необходимое.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция поддержки -->
+    <div class="glass-card support-section">
+        <div class="support-header"><h2>ПОДДЕРЖАТЬ ПРОЕКТ</h2></div>
+        <div class="heart-icon">💙</div>
+        <div class="support-text">
+            <p style="margin: 0; font-size: 1.1em;"><strong>Приложение бесплатное. Было и останется.</strong></p>
+            <p style="margin: 12px 0 0 0;">Если проект помог вам или вашим близким — можете поддержать разработку добровольным переводом.</p>
+        </div>
+        <div class="phone-section">
+            <h3 style="color: white; margin-bottom: 8px;">📱 ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА:</h3>
+            <div class="phone-number">8-920-227-56-76</div>
+            <button class="copy-btn" onclick="copyPhone()">📋 Копировать номер</button>
+            <div class="support-features">
+                <span class="feature-badge">✅ Мгновенно</span>
+                <span class="feature-badge">✅ Без комиссии</span>
+                <span class="feature-badge">✅ Безопасно</span>
+            </div>
+        </div>
+        <div style="text-align: center; margin: 20px 0;"><p style="font-size: 1.2em; color: white;"><strong>❤️ Спасибо за поддержку!</strong></p></div>
+        <a href="https://ancf-hue.github.io/" target="_blank" class="catalog-link">
+            <h3>Каталог бесплатных офлайн-приложений Anti-AI Shield</h3>
+            <p>Перейти в каталог</p>
+            <div class="catalog-url">https://ancf-hue.github.io/</div>
+        </a>
+        <img src="lesson-23-cuda.png" alt="CUDA Architecture Visualization" class="decorative-image">
+    </div>
+
+    <!-- Навигация -->
+    <div class="glass-card" style="text-align: center;">
+        <div class="btn-group" style="justify-content: center;">
+            <a href="lesson-22.html" class="btn-3d">◀ Назад</a>
+            <a href="lesson-24.html" class="btn-3d primary">Следующий урок ▶</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleBlock(id, btn) {
+            const block = document.getElementById(id);
+            const isActive = block.classList.contains('active');
+            document.querySelectorAll('.code-block-container').forEach(el => el.classList.remove('active'));
+            if (!isActive) {
+                block.classList.add('active');
+                if(btn.textContent.includes('Шаблон')) btn.textContent = '📖 Закрыть шаблон';
+                else if(btn.textContent.includes('Решение')) btn.textContent = '📖 Закрыть решение';
+                else if(btn.textContent.includes('Теория')) btn.textContent = '📖 Закрыть теорию';
+                else btn.textContent = '📖 Закрыть';
+            } else {
+                if(id === 'template-cuda') btn.textContent = '💻 Открыть шаблон кода';
+                else if(id === 'solution-cuda') btn.textContent = '✅ Показать решение';
+                else if(id === 'theory-cuda') btn.textContent = '📚 Теория: Memory Hierarchy GPU';
+            }
+        }
+
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector(`[onclick="copyCode('${elementId}')"]`);
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            }).catch(() => alert("Не удалось скопировать код."));
+        }
+
+        function copyPhone() {
+            const phone = "8-920-227-56-76";
+            navigator.clipboard.writeText(phone).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                btn.style.background = 'rgba(16, 185, 129, 0.4)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                }, 2000);
+            }).catch(() => alert("Не удалось скопировать номер."));
+        }
+
+        window.addEventListener('load', () => {
+            document.querySelector('.progress-fill').style.width = '92%';
+        });
+    </script>
+</body>
+</html>

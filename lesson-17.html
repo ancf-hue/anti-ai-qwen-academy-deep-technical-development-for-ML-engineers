@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 17: Эффективное дообучение (PEFT / LoRA) | Anti-AI Qwen Academy</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        /* --- Основные стили (идентичны предыдущим урокам) --- */
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --secondary: #6c5ce7;
+            --accent: #00cec9;
+            --glass-bg: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.25);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --text-primary: #ffffff;
+            --text-secondary: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --important-bg: rgba(59, 130, 246, 0.15);
+            --warning-bg: rgba(245, 158, 11, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
+
+        .header-container { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; margin-bottom: 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
+        .page-logo { width: 48px; height: 48px; border-radius: 12px; object-fit: contain; background: rgba(255, 255, 255, 0.2); padding: 4px; }
+        
+        h1 { color: white; font-size: 1.8em; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .subtitle { color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin-top: 4px; }
+        
+        h2 { color: white; margin: 32px 0 16px; font-size: 1.5em; display: flex; align-items: center; gap: 10px; }
+        h2::before { content: "▍"; color: var(--accent); }
+        h3 { color: rgba(255, 255, 255, 0.95); margin: 24px 0 12px; font-size: 1.2em; }
+        p { color: rgba(255, 255, 255, 0.95); margin-bottom: 16px; }
+        
+        code { font-family: "Fira Code", "Courier New", monospace; background: rgba(0, 0, 0, 0.25); padding: 2px 6px; border-radius: 6px; font-size: 0.95em; color: #fbbf24; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 12px; overflow-x: auto; margin: 16px 0; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9em; line-height: 1.5; }
+        pre code { background: transparent; padding: 0; color: inherit; }
+        
+        .important, .warning { padding: 16px 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid; backdrop-filter: blur(8px); }
+        .important { background: var(--important-bg); border-left-color: #3b82f6; color: #eff6ff; }
+        .warning { background: var(--warning-bg); border-left-color: #f59e0b; color: #fffbeb; }
+        .important strong, .warning strong { display: block; margin-bottom: 4px; font-size: 1.05em; color: white; }
+        
+        .formula { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); padding: 16px; border-radius: 12px; font-family: "Georgia", serif; font-style: italic; text-align: center; margin: 20px 0; color: white; font-size: 1.1em; backdrop-filter: blur(8px); }
+        
+        ul { padding-left: 24px; margin: 16px 0; }
+        li { margin-bottom: 10px; color: rgba(255, 255, 255, 0.95); }
+        li::marker { color: var(--accent); font-weight: bold; }
+        strong { color: white; }
+        
+        .btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0; justify-content: center; }
+        .btn-3d {
+            position: relative; padding: 14px 28px; font-size: 1em; font-weight: 600; color: white;
+            background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.15s ease; user-select: none;
+        }
+        .btn-3d:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15), 0 12px 28px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+        .btn-3d:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-3d.primary { background: linear-gradient(145deg, rgba(26,115,232,0.4), rgba(26,115,232,0.2)); border-color: rgba(26, 115, 232, 0.5); }
+        .btn-3d.success { background: linear-gradient(145deg, rgba(16,185,129,0.4), rgba(16,185,129,0.2)); border-color: rgba(16, 185, 129, 0.5); }
+        .btn-3d::after { content: ""; position: absolute; top: 4px; left: 4px; right: 4px; height: 40%; background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent); border-radius: 12px 12px 50% 50%; pointer-events: none; }
+
+        .progress-bar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(0, 0, 0, 0.15); border-radius: 12px; margin: 20px 0; }
+        .progress-bar span { color: white; font-weight: 500; }
+        .progress-track { flex: 1; height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--secondary)); border-radius: 4px; transition: width 1s ease; }
+        
+        .code-block-container { display: none; margin-top: 16px; animation: fadeIn 0.3s ease; }
+        .code-block-container.active { display: block; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .code-title { color: white; font-weight: 600; font-size: 0.95em; }
+        .copy-code-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8em; transition: all 0.2s; }
+        .copy-code-btn:hover { background: rgba(255,255,255,0.25); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .support-section { background: linear-gradient(145deg, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.15)); border: 2px solid rgba(236, 72, 153, 0.4); }
+        .support-header { text-align: center; margin-bottom: 24px; }
+        .support-header h2 { justify-content: center; font-size: 1.8em; margin-bottom: 8px; }
+        .support-header h2::before { content: "🤝"; margin-right: 10px; color: white; }
+        .heart-icon { font-size: 3em; text-align: center; margin: 16px 0; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .support-text { background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; margin: 16px 0; text-align: center; }
+        .phone-section { background: rgba(16, 185, 129, 0.15); border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; }
+        .phone-number { font-size: 1.8em; font-weight: bold; color: white; margin: 12px 0; font-family: "Fira Code", monospace; letter-spacing: 2px; }
+        .copy-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; margin: 8px; transition: all 0.2s; }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+        .support-features { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+        .feature-badge { background: rgba(16, 185, 129, 0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.85em; color: white; }
+        .catalog-link { background: linear-gradient(145deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; text-decoration: none; display: block; transition: all 0.3s; }
+        .catalog-link:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4); }
+        .catalog-link h3 { color: white; margin: 0 0 8px 0; font-size: 1.3em; }
+        .catalog-link h3::before { content: "🌟 "; }
+        .catalog-link p { color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 0.95em; }
+        .catalog-url { background: rgba(0, 0, 0, 0.3); padding: 8px 12px; border-radius: 8px; font-family: "Fira Code", monospace; font-size: 0.85em; color: #fbbf24; margin-top: 12px; display: inline-block; word-break: break-all; }
+        
+        .decorative-image { width: 100%; max-width: 600px; margin: 24px auto; display: block; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .glass-card { padding: 20px; border-radius: 16px; }
+            h1 { font-size: 1.5em; }
+            .btn-group { flex-direction: column; }
+            .btn-3d { width: 100%; justify-content: center; }
+            .phone-number { font-size: 1.4em; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Шапка -->
+    <div class="glass-card header-container">
+        <img src="favicon.ico" alt="Логотип" class="page-logo">
+        <div>
+            <h1>Урок 17: Эффективное дообучение (PEFT / LoRA)</h1>
+            <div class="subtitle">ML-инженер • Блок 4: Масштабирование и инженерия LLM</div>
+        </div>
+    </div>
+
+    <!-- Прогресс -->
+    <div class="glass-card progress-bar">
+        <span>Прогресс курса:</span>
+        <div class="progress-track"><div class="progress-fill"></div></div>
+        <span>17/25</span>
+    </div>
+
+    <!-- Введение -->
+    <div class="glass-card">
+        <p>Полное дообучение (Full Fine-Tuning) больших языковых моделей требует изменения всех миллиардов их параметров. Это экономически нецелесообразно: для обновления весов условной модели на 70B параметров потребуется кластер из дорогостоящих видеокарт только под хранение состояний оптимизатора (Adam). На этом уроке мы разберем концепцию <strong>PEFT (Parameter-Efficient Fine-Tuning)</strong> и математику алгоритма <strong>LoRA</strong>, позволяющего адаптировать гигантские нейросети на одной бытовой GPU.</p>
+
+        <div class="important">
+            <strong>🔑 Гипотеза о низкоранговой внутренней размерности:</strong> 
+            При адаптации предобученной модели под конкретную узкую задачу (например, перевод или медицинский чат-бот) матрица изменения весов $\Delta W$ имеет очень низкую «внутреннюю размерность» (низкий ранг). Это значит, что её можно разложить на произведение двух гораздо более узких матриц, радикально сократив число обучаемых параметров.
+        </div>
+    </div>
+
+    <!-- Раздел 1 -->
+    <div class="glass-card">
+        <h2>1. Математическая декомпозиция LoRA</h2>
+        <p>Вместо того чтобы обновлять исходную матрицу весов слоя $W_0$ размера $(d \times k)$, LoRA замораживает её. Рядом со слоем создается параллельный обходной путь из двух матриц: $A$ размера $(d \times r)$ и $B$ размера $(r \times k)$, где ранг $r \ll d, k$ (обычно $r$ выбирают равным 8, 16 или 64).</p>
+        
+        <div class="formula" style="margin-top: 12px;">
+            Y = W₀ · X + ΔW · X = W₀ · X + (α/r)(B · A) · X
+        </div>
+        
+        <p>Где $\alpha$ (alpha) — постоянный коэффициент масштабирования. При инициализации матрица $A$ заполняется случайными гауссовыми числами, а матрица $B$ — строгими нулями. Таким образом, в самом начале обучения $\Delta W = 0$, и поведение модели полностью совпадает с оригиналом, исключая резкие скачки лосса.</p>
+    </div>
+
+    <!-- Раздел 2 -->
+    <div class="glass-card">
+        <h2>2. Реализация LoRA-слоя в PyTorch</h2>
+        <p>Напишем обертку, которая перехватывает сигнал, замораживает базовые веса и создает низкоранговые адаптеры.</p>
+
+        <pre><code>import torch
+import torch.nn as nn
+import math
+
+class LoRALinear(nn.Module):
+    def __init__(self, base_layer, rank=8, lora_alpha=16):
+        super().__init__()
+        self.base_layer = base_layer
+        self.rank = rank
+        self.lora_alpha = lora_alpha
+        self.scaling = lora_alpha / rank
+
+        # Полностью замораживаем веса оригинального слоя
+        self.base_layer.weight.requires_grad = False
+        if self.base_layer.bias is not None:
+            self.base_layer.bias.requires_grad = False
+
+        # Извлекаем размерности оригинальной матрицы весов
+        out_features, in_features = self.base_layer.weight.shape
+
+        # Создаем низкоранговые матрицы A и B как новые обучаемые параметры
+        self.lora_A = nn.Parameter(torch.empty(rank, in_features))
+        self.lora_B = nn.Parameter(torch.empty(out_features, rank))
+
+        # Инициализируем параметры по правилам LoRA
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        # Матрица A инициализируется по Каимингу (He)
+        nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
+        # Матрица B строго заполняется нулями
+        nn.init.zeros_(self.lora_B)
+
+    def forward(self, x):
+        # Прогон через базовый замороженный слой
+        base_output = self.base_layer(x)
+
+        # Вычисляем параллельный путь адаптера
+        lora_output = (x @ self.lora_A.t()) @ self.lora_B.t()
+        lora_output = lora_output * self.scaling
+
+        # Итоговый сигнал — сумма базового ответа и низкорангового смещения
+        return base_output + lora_output</code></pre>
+    </div>
+
+    <!-- Раздел 3 -->
+    <div class="glass-card">
+        <h2>3. Эволюция до QLoRA и слияние весов</h2>
+        <p>Для еще более глубокой оптимизации инженеры используют <strong>QLoRA</strong>. Концепция заключается в том, что оригинальные веса модели сжимаются до сверхплотного 4-битного представления данных нового типа — <strong>NF4 (NormalFloat4)</strong>. На этапе прямого прохода эти веса распаковываются «на лету» в формат FP16, перемножаются с матрицей входа, а градиенты вычисляются и сохраняются только для 16-битных весов адаптеров LoRA. Это позволяет дообучать модели уровня Llama-3-7B прямо на одной видеокарте класса RTX 3090 / 4090.</p>
+        
+        <p><strong>Слияние весов (Zero-Latency Inference):</strong> Дополнительное преимущество LoRA — отсутствие задержек на инференсе. По окончании обучения мы можем физически прибавить вычисленное произведение матриц $\frac{\alpha}{r}(B \cdot A)$ к оригинальной матрице $W_0$. В результате мы получаем чистый обновленный линейный слой стандартного формата без необходимости хранить обходные пути в продакшене.</p>
+    </div>
+
+    <!-- Практика с РАБОТАЮЩИМИ кнопками -->
+    <div class="glass-card">
+        <h2>🎯 Практическое задание</h2>
+        <p>Напишите функцию <code>merge_weights(self)</code> для класса <code>LoRALinear</code>. Функция должна производить вычисление матрицы дельты $\Delta W = (B \cdot A) \cdot \text{scaling}$ с учетом правильного транспонирования, прибавлять полученное значение к тензору весов базового слоя (<code>self.base_layer.weight.data</code>) и переводить состояние модуля так, чтобы метод <code>forward</code> перестал вычислять параллельный обходной путь, выполняя инференс на максимальной скорости. Проверьте равенство выходов до и после слияния.</p>
+        
+        <div class="btn-group">
+            <button class="btn-3d primary" onclick="toggleBlock('template-lora', this)">💻 Открыть шаблон кода</button>
+            <button class="btn-3d success" onclick="toggleBlock('solution-lora', this)">✅ Показать решение</button>
+            <button class="btn-3d" onclick="toggleBlock('theory-lora', this)">📚 Теория: Rank selection</button>
+        </div>
+
+        <!-- Блок 1: Шаблон -->
+        <div id="template-lora" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">📝 Шаблон (lora_merge_starter.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-template-lora')">📋 Копировать</button>
+            </div>
+            <pre id="code-template-lora"><code>class LoRALinear(nn.Module):
+    # ... (__init__, reset_parameters, forward из урока) ...
+    
+    def merge_weights(self):
+        """
+        Слияние весов LoRA-адаптера с базовым слоем для ускорения инференса.
+        После вызова этой модели forward должен использовать только base_layer.
+        """
+        # 1. Вычислите ΔW = (B · A) · scaling
+        # Обратите внимание на транспонирование: lora_B имеет форму [out, r], lora_A [r, in]
+        # ВАШ КОД ЗДЕСЬ
+        
+        # 2. Прибавьте ΔW к базовым весам
+        # ВАШ КОД ЗДЕСЬ: self.base_layer.weight.data += delta_w
+        
+        # 3. Отключите вычисление LoRA-пути (например, установите флаг или обнулите параметры)
+        # ВАШ КОД ЗДЕСЬ
+        
+        # 4. Установите requires_grad=False для всех параметров, так как обучение завершено
+        # ВАШ КОД ЗДЕСЬ
+
+# Проверка равенства выходов до и после слияния:
+# x = torch.randn(2, 4096)
+# out_before = lora_layer(x)
+# lora_layer.merge_weights()
+# out_after = lora_layer(x)
+# assert torch.allclose(out_before, out_after, atol=1e-5)</code></pre>
+        </div>
+
+        <!-- Блок 2: Решение -->
+        <div id="solution-lora" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">✅ Готовое решение (lora_merge_solution.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-solution-lora')">📋 Копировать</button>
+            </div>
+            <pre id="code-solution-lora"><code>class LoRALinear(nn.Module):
+    # ... (__init__, reset_parameters, forward из урока) ...
+    
+    def __init__(self, base_layer, rank=8, lora_alpha=16):
+        super().__init__()
+        self.base_layer = base_layer
+        self.rank = rank
+        self.lora_alpha = lora_alpha
+        self.scaling = lora_alpha / rank
+        self.merged = False  # Флаг состояния слияния
+        
+        self.base_layer.weight.requires_grad = False
+        if self.base_layer.bias is not None:
+            self.base_layer.bias.requires_grad = False
+            
+        out_features, in_features = self.base_layer.weight.shape
+        self.lora_A = nn.Parameter(torch.empty(rank, in_features))
+        self.lora_B = nn.Parameter(torch.empty(out_features, rank))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
+        nn.init.zeros_(self.lora_B)
+
+    def forward(self, x):
+        if self.merged:
+            return self.base_layer(x)
+            
+        base_output = self.base_layer(x)
+        lora_output = (x @ self.lora_A.t()) @ self.lora_B.t() * self.scaling
+        return base_output + lora_output
+
+    def merge_weights(self):
+        if not self.merged:
+            # ΔW = B @ A, затем масштабируем
+            # lora_B: [out, r], lora_A: [r, in] → B@A: [out, in]
+            delta_w = (self.lora_B @ self.lora_A) * self.scaling
+            
+            # Прибавляем к базовым весам
+            self.base_layer.weight.data += delta_w
+            
+            # Обнуляем LoRA-параметры (для экономии памяти)
+            self.lora_A.zero_()
+            self.lora_B.zero_()
+            
+            # Отключаем градиенты
+            for p in self.parameters():
+                p.requires_grad = False
+                
+            self.merged = True
+
+# Проверка:
+# x = torch.randn(2, 4096)
+# out_before = lora_layer(x).clone()
+# lora_layer.merge_weights()
+# out_after = lora_layer(x)
+# assert torch.allclose(out_before, out_after, atol=1e-5), "Ошибка слияния!"</code></pre>
+        </div>
+
+        <!-- Блок 3: Теория -->
+        <div id="theory-lora" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">📚 Выбор ранга (Rank Selection) в LoRA</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; color: rgba(255,255,255,0.95);">
+                <h3 style="margin-top: 0; color: white;">Как выбрать правильный ранг r?</h3>
+                <p>Ранг $r$ определяет «емкость» адаптера. Чем выше ранг, тем больше параметров обучается и тем лучше модель может адаптироваться, но тем выше риск переобучения и потребление памяти.</p>
+                
+                <h4>🔑 Практические рекомендации:</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>r=4-8:</strong> Для простых задач классификации или небольших датасетов. Быстро обучается, минимум памяти.</li>
+                    <li><strong>r=16-32:</strong> Стандарт для большинства задач дообучения LLM (чат-боты, перевод). Баланс качества и скорости.</li>
+                    <li><strong>r=64-256:</strong> Для сложных задач, требующих глубокого понимания домена (медицина, право, код). Требует больше VRAM.</li>
+                </ul>
+
+                <div class="formula" style="text-align: left; padding: 16px; margin: 16px 0;">
+                    <strong>Формула экономии памяти:</strong><br>
+                    Params_base = d × k (заморожены, не требуют оптимизатор)<br>
+                    Params_lora = r × (d + k) × 2 (обучаемые)<br>
+                    Экономия ≈ (d × k) / (r × (d + k) × 2) раз<br><br>
+                    Пример для d=k=4096, r=8: экономия ~256x по обучаемым параметрам
+                </div>
+
+                <div class="important" style="margin-top: 16px;">
+                    <strong> Alpha scaling:</strong> 
+                    Параметр $\alpha$ позволяет отдельно контролировать «силу» адаптации без изменения ранга. Если $\alpha = r$, то scaling = 1. Часто $\alpha$ устанавливают в 2× или 4× от $r$ для более агрессивного дообучения.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция поддержки -->
+    <div class="glass-card support-section">
+        <div class="support-header"><h2>ПОДДЕРЖАТЬ ПРОЕКТ</h2></div>
+        <div class="heart-icon">💙</div>
+        <div class="support-text">
+            <p style="margin: 0; font-size: 1.1em;"><strong>Приложение бесплатное. Было и останется.</strong></p>
+            <p style="margin: 12px 0 0 0;">Если проект помог вам или вашим близким — можете поддержать разработку добровольным переводом.</p>
+        </div>
+        <div class="phone-section">
+            <h3 style="color: white; margin-bottom: 8px;">📱 ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА:</h3>
+            <div class="phone-number">8-920-227-56-76</div>
+            <button class="copy-btn" onclick="copyPhone()">📋 Копировать номер</button>
+            <div class="support-features">
+                <span class="feature-badge">✅ Мгновенно</span>
+                <span class="feature-badge">✅ Без комиссии</span>
+                <span class="feature-badge">✅ Безопасно</span>
+            </div>
+        </div>
+        <div style="text-align: center; margin: 20px 0;"><p style="font-size: 1.2em; color: white;"><strong>❤️ Спасибо за поддержку!</strong></p></div>
+        <a href="https://ancf-hue.github.io/" target="_blank" class="catalog-link">
+            <h3>Каталог бесплатных офлайн-приложений Anti-AI Shield</h3>
+            <p>Перейти в каталог</p>
+            <div class="catalog-url">https://ancf-hue.github.io/</div>
+        </a>
+        <img src="lesson-17-lora.png" alt="LoRA Architecture Visualization" class="decorative-image">
+    </div>
+
+    <!-- Навигация -->
+    <div class="glass-card" style="text-align: center;">
+        <div class="btn-group" style="justify-content: center;">
+            <a href="lesson-16.html" class="btn-3d">◀ Назад</a>
+            <a href="lesson-18.html" class="btn-3d primary">Следующий урок ▶</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleBlock(id, btn) {
+            const block = document.getElementById(id);
+            const isActive = block.classList.contains('active');
+            document.querySelectorAll('.code-block-container').forEach(el => el.classList.remove('active'));
+            if (!isActive) {
+                block.classList.add('active');
+                if(btn.textContent.includes('Шаблон')) btn.textContent = '📖 Закрыть шаблон';
+                else if(btn.textContent.includes('Решение')) btn.textContent = '📖 Закрыть решение';
+                else if(btn.textContent.includes('Теория')) btn.textContent = '📖 Закрыть теорию';
+                else btn.textContent = '📖 Закрыть';
+            } else {
+                if(id === 'template-lora') btn.textContent = ' Открыть шаблон кода';
+                else if(id === 'solution-lora') btn.textContent = '✅ Показать решение';
+                else if(id === 'theory-lora') btn.textContent = '📚 Теория: Rank selection';
+            }
+        }
+
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector(`[onclick="copyCode('${elementId}')"]`);
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            }).catch(() => alert("Не удалось скопировать код."));
+        }
+
+        function copyPhone() {
+            const phone = "8-920-227-56-76";
+            navigator.clipboard.writeText(phone).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                btn.style.background = 'rgba(16, 185, 129, 0.4)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                }, 2000);
+            }).catch(() => alert("Не удалось скопировать номер."));
+        }
+
+        window.addEventListener('load', () => {
+            document.querySelector('.progress-fill').style.width = '68%';
+        });
+    </script>
+</body>
+</html>

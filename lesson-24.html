@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 24: Компиляция моделей | Anti-AI Qwen Academy</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        /* --- Основные стили (идентичны предыдущим урокам) --- */
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --secondary: #6c5ce7;
+            --accent: #00cec9;
+            --glass-bg: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.25);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --text-primary: #ffffff;
+            --text-secondary: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --important-bg: rgba(59, 130, 246, 0.15);
+            --warning-bg: rgba(245, 158, 11, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
+
+        .header-container { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; margin-bottom: 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
+        .page-logo { width: 48px; height: 48px; border-radius: 12px; object-fit: contain; background: rgba(255, 255, 255, 0.2); padding: 4px; }
+        
+        h1 { color: white; font-size: 1.8em; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .subtitle { color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin-top: 4px; }
+        
+        h2 { color: white; margin: 32px 0 16px; font-size: 1.5em; display: flex; align-items: center; gap: 10px; }
+        h2::before { content: "▍"; color: var(--accent); }
+        h3 { color: rgba(255, 255, 255, 0.95); margin: 24px 0 12px; font-size: 1.2em; }
+        p { color: rgba(255, 255, 255, 0.95); margin-bottom: 16px; }
+        
+        code { font-family: "Fira Code", "Courier New", monospace; background: rgba(0, 0, 0, 0.25); padding: 2px 6px; border-radius: 6px; font-size: 0.95em; color: #fbbf24; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 12px; overflow-x: auto; margin: 16px 0; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9em; line-height: 1.5; }
+        pre code { background: transparent; padding: 0; color: inherit; }
+        
+        .important, .warning { padding: 16px 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid; backdrop-filter: blur(8px); }
+        .important { background: var(--important-bg); border-left-color: #3b82f6; color: #eff6ff; }
+        .warning { background: var(--warning-bg); border-left-color: #f59e0b; color: #fffbeb; }
+        .important strong, .warning strong { display: block; margin-bottom: 4px; font-size: 1.05em; color: white; }
+        
+        .formula { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); padding: 16px; border-radius: 12px; font-family: "Georgia", serif; font-style: italic; text-align: center; margin: 20px 0; color: white; font-size: 1.1em; backdrop-filter: blur(8px); }
+        
+        ul { padding-left: 24px; margin: 16px 0; }
+        li { margin-bottom: 10px; color: rgba(255, 255, 255, 0.95); }
+        li::marker { color: var(--accent); font-weight: bold; }
+        strong { color: white; }
+        
+        .btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0; justify-content: center; }
+        .btn-3d {
+            position: relative; padding: 14px 28px; font-size: 1em; font-weight: 600; color: white;
+            background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.15s ease; user-select: none;
+        }
+        .btn-3d:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15), 0 12px 28px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+        .btn-3d:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-3d.primary { background: linear-gradient(145deg, rgba(26,115,232,0.4), rgba(26,115,232,0.2)); border-color: rgba(26, 115, 232, 0.5); }
+        .btn-3d.success { background: linear-gradient(145deg, rgba(16,185,129,0.4), rgba(16,185,129,0.2)); border-color: rgba(16, 185, 129, 0.5); }
+        .btn-3d::after { content: ""; position: absolute; top: 4px; left: 4px; right: 4px; height: 40%; background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent); border-radius: 12px 12px 50% 50%; pointer-events: none; }
+
+        .progress-bar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(0, 0, 0, 0.15); border-radius: 12px; margin: 20px 0; }
+        .progress-bar span { color: white; font-weight: 500; }
+        .progress-track { flex: 1; height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--secondary)); border-radius: 4px; transition: width 1s ease; }
+        
+        .code-block-container { display: none; margin-top: 16px; animation: fadeIn 0.3s ease; }
+        .code-block-container.active { display: block; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .code-title { color: white; font-weight: 600; font-size: 0.95em; }
+        .copy-code-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8em; transition: all 0.2s; }
+        .copy-code-btn:hover { background: rgba(255,255,255,0.25); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .support-section { background: linear-gradient(145deg, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.15)); border: 2px solid rgba(236, 72, 153, 0.4); }
+        .support-header { text-align: center; margin-bottom: 24px; }
+        .support-header h2 { justify-content: center; font-size: 1.8em; margin-bottom: 8px; }
+        .support-header h2::before { content: "🤝"; margin-right: 10px; color: white; }
+        .heart-icon { font-size: 3em; text-align: center; margin: 16px 0; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .support-text { background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; margin: 16px 0; text-align: center; }
+        .phone-section { background: rgba(16, 185, 129, 0.15); border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; }
+        .phone-number { font-size: 1.8em; font-weight: bold; color: white; margin: 12px 0; font-family: "Fira Code", monospace; letter-spacing: 2px; }
+        .copy-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; margin: 8px; transition: all 0.2s; }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+        .support-features { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+        .feature-badge { background: rgba(16, 185, 129, 0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.85em; color: white; }
+        .catalog-link { background: linear-gradient(145deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; text-decoration: none; display: block; transition: all 0.3s; }
+        .catalog-link:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4); }
+        .catalog-link h3 { color: white; margin: 0 0 8px 0; font-size: 1.3em; }
+        .catalog-link p { color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 0.95em; }
+        .catalog-url { background: rgba(0, 0, 0, 0.3); padding: 8px 12px; border-radius: 8px; font-family: "Fira Code", monospace; font-size: 0.85em; color: #fbbf24; margin-top: 12px; display: inline-block; word-break: break-all; }
+        
+        .decorative-image { width: 100%; max-width: 600px; margin: 24px auto; display: block; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .glass-card { padding: 20px; border-radius: 16px; }
+            h1 { font-size: 1.5em; }
+            .btn-group { flex-direction: column; }
+            .btn-3d { width: 100%; justify-content: center; }
+            .phone-number { font-size: 1.4em; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Шапка -->
+    <div class="glass-card header-container">
+        <img src="favicon.ico" alt="Логотип" class="page-logo">
+        <div>
+            <h1>Урок 24: Компиляция моделей</h1>
+            <div class="subtitle">ML-инженер • Блок 5: Низкоуровневая оптимизация и Production</div>
+        </div>
+    </div>
+
+    <!-- Прогресс -->
+    <div class="glass-card progress-bar">
+        <span>Прогресс курса:</span>
+        <div class="progress-track"><div class="progress-fill"></div></div>
+        <span>24/25</span>
+    </div>
+
+    <!-- Введение -->
+    <div class="glass-card">
+        <p>На прошлом уроке мы вручную писали кастомные ядра, чтобы объединять операции. Однако современный стек глубокого обучения предлагает автоматизировать этот процесс. С выходом экосистемы <code>TorchDynamo</code> и <code>TorchInductor</code> инженерам больше не нужно переписывать архитектуры на C++ для достижения максимального быстродействия. Инструмент <code>torch.compile</code> превращает динамический код Python в оптимизированный граф вычислений на лету.</p>
+
+        <div class="important">
+            <strong>🔑 Как работает torch.compile под капотом:</strong> 
+            Фреймворк перехватывает выполнение байт-кода Python прямо перед исполнением с помощью JIT-компиляции (<code>TorchDynamo</code>). Он анализирует граф операций, находит участки для автоматического слияния слоев (Operator Fusion) и передает эту схему компилятору <code>TorchInductor</code>. Индуктор генерирует под этот граф кастомные, сверхбыстрые ядра на языке OpenAI Triton и C++, идеально адаптированные под вашу видеокарту.
+        </div>
+    </div>
+
+    <!-- Раздел 1 -->
+    <div class="glass-card">
+        <h2>1. Режимы компиляции PyTorch 2.x/3.x</h2>
+        <p>Функция компиляции принимает параметр <code>mode</code>, который гибко настраивает баланс между временем компиляции и скоростью инференса:</p>
+        <ul>
+            <li><code>default</code>: Сбалансированный режим. Оптимизирует граф, не затягивая процесс первой компиляции модели.</li>
+            <li><code>reduce-overhead</code>: Подавляет накладные расходы со стороны хоста (CPU Python-интерпретатора) с помощью технологии CUDA Graphs. Идеально для небольших моделей, где задержки вызова слоев (overhead) сопоставимы со временем их вычисления на GPU.</li>
+            <li><code>max-autotune</code>: Самый агрессивный режим. Запускает встроенный бенчмарк, перебирает десятки различных вариантов ядер Triton и выбирает математически быстрейшую конфигурацию под конкретно вашу архитектуру и геометрию памяти чипа. Сильно замедляет первый запуск (до нескольких минут), но выдает максимальный FPS в продакшене.</li>
+        </ul>
+    </div>
+
+    <!-- Раздел 2 -->
+    <div class="glass-card">
+        <h2>2. Использование автоматической компиляции графа в коде</h2>
+        <p>Продемонстрируем, как скомпилировать кастомный блок и измерить прирост скорости инференса.</p>
+
+        <pre><code>import torch
+import torch.nn as nn
+import time
+
+# Создаем типичный тяжелый слой с множеством мелких операций, идеальный для Operator Fusion
+class SpeculativeBlock(nn.Module):
+    def __init__(self, dim=2048):
+        super().__init__()
+        self.linear1 = nn.Linear(dim, dim)
+        self.linear2 = nn.Linear(dim, dim)
+        self.gelu = nn.GELU()
+
+    def forward(self, x):
+        # Набор последовательных операций, которые без компиляции трижды обращаются к VRAM
+        a = self.gelu(self.linear1(x))
+        b = torch.sin(a) + torch.cos(a)
+        return self.linear2(b) * a
+
+# Инициализируем модель и переводим на GPU
+model = SpeculativeBlock().cuda().half() # Используем FP16 точность
+mock_input = torch.randn(128, 2048, device='cuda', dtype=torch.float16)
+
+# ---- Вариант 1: Обычный инференс (Eager Mode) ----
+# Прогрев GPU (Warmup)
+for _ in range(10): _ = model(mock_input)
+
+start_time = time.perf_counter()
+for _ in range(100): _ = model(mock_input)
+eager_duration = time.perf_counter() - start_time
+print(f"Время выполнения в Eager Mode: {eager_duration:.4f} сек")
+
+# ---- Вариант 2: Скомпилированный инференс (Compiled Mode) ----
+# Оборачиваем модель в компилятор
+compiled_model = torch.compile(model, mode="max-autotune")
+
+# ВАЖНО: Первый запуск будет долгим — идет генерация ядер Triton Индуктором!
+_ = compiled_model(mock_input)
+
+# Прогрев скомпилированной модели
+for _ in range(10): _ = compiled_model(mock_input)
+
+start_time = time.perf_counter()
+for _ in range(100): _ = compiled_model(mock_input)
+compiled_duration = time.perf_counter() - start_time
+print(f"Время выполнения после torch.compile: {compiled_duration:.4f} сек")
+print(f"Ускорение графического конвейера: {eager_duration / compiled_duration:.2f}x")</code></pre>
+    </div>
+
+    <!-- Раздел 3 -->
+    <div class="glass-card">
+        <h2>3. Ловушка "Разрыва Графа" (Graph Breaks)</h2>
+        
+        <div class="warning">
+            <strong>⚠️ Главный враг компиляции:</strong> 
+            Если внутри вашего метода <code>forward</code> присутствуют конструкции, которые компилятор не может перевести в статический граф тензорных операций, происходит «разрыв графа» (Graph Break). К таким конструкциям относятся: вызовы сторонних библиотек (numpy, scipy), логирование через встроенный <code>print()</code> или сложные динамические условия на Python (<code>if/else</code> зависящие от значений элементов внутри тензора). При разрыве графа модель на каждом шаге переключается обратно на медленный интерпретатор Python, полностью уничтожая выигрыш от компиляции.
+        </div>
+    </div>
+
+    <!-- Практика с РАБОТАЮЩИМИ кнопками -->
+    <div class="glass-card">
+        <h2>🎯 Практическое задание</h2>
+        <p>Используйте встроенную утилиту отладки PyTorch: <code>torch._dynamo.explain()</code>. Передайте в неё вашу кастомную модель из предыдущих блоков, внутри которой намеренно разместите вызов преобразования тензора в массив numpy (<code>x.detach().cpu().numpy()</code>) в середине метода <code>forward</code>. Проанализируйте сгенерированный утилитой текстовый лог. Зафиксируйте количество обнаруженных разрывов графа (Graph Breaks) и опишите инженерный способ устранения этой проблемы.</p>
+        
+        <div class="btn-group">
+            <button class="btn-3d primary" onclick="toggleBlock('template-compile', this)">💻 Открыть шаблон кода</button>
+            <button class="btn-3d success" onclick="toggleBlock('solution-compile', this)">✅ Показать решение</button>
+            <button class="btn-3d" onclick="toggleBlock('theory-compile', this)">📚 Теория: Graph Breaks Deep Dive</button>
+        </div>
+
+        <!-- Блок 1: Шаблон -->
+        <div id="template-compile" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title"> Шаблон (graph_breaks_debug.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-template-compile')">📋 Копировать</button>
+            </div>
+            <pre id="code-template-compile"><code>import torch
+import torch.nn as nn
+import torch._dynamo as dynamo
+
+class ModelWithBreak(nn.Module):
+    def __init__(self, dim=512):
+        super().__init__()
+        self.linear = nn.Linear(dim, dim)
+    
+    def forward(self, x):
+        x = self.linear(x)
+        
+        # ⚠️ НАМЕРЕННЫЙ РАЗРЫВ ГРАФА:
+        # Конвертация в numpy ломает статический граф TorchDynamo
+        # ВАШ КОД: разместите здесь x.detach().cpu().numpy()
+        
+        return torch.relu(x)
+
+# Создаем модель и тестовый вход
+model = ModelWithBreak().cuda()
+dummy_input = torch.randn(32, 512, device='cuda')
+
+# Запускаем утилиту объяснения графа
+print("=== Анализ графа torch._dynamo.explain() ===")
+# dynamo.explain(model)(dummy_input)
+
+# Задача:
+# 1. Раскомментируйте вызов dynamo.explain()
+# 2. Запустите скрипт и изучите вывод
+# 3. Найдите в логе строку "Graph breaks: N"
+# 4. Предложите способ устранения разрыва (подсказка: torch ops вместо numpy)</code></pre>
+        </div>
+
+        <!-- Блок 2: Решение -->
+        <div id="solution-compile" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">✅ Готовое решение (graph_breaks_solution.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-solution-compile')">📋 Копировать</button>
+            </div>
+            <pre id="code-solution-compile"><code>import torch
+import torch.nn as nn
+import torch._dynamo as dynamo
+
+class ModelWithBreak(nn.Module):
+    def __init__(self, dim=512):
+        super().__init__()
+        self.linear = nn.Linear(dim, dim)
+    
+    def forward(self, x):
+        x = self.linear(x)
+        
+        # ❌ РАЗРЫВ ГРАФА (не компилируется):
+        # numpy_array = x.detach().cpu().numpy()
+        # condition = numpy_array.mean() > 0
+        
+        # ✅ ИСПРАВЛЕНИЕ: используем только torch-операции
+        # Все операции остаются в графе и компилируются
+        mean_val = x.mean()
+        condition = mean_val > 0
+        
+        # Для условной логики используем torch.where вместо if/else
+        x = torch.where(condition, torch.relu(x), torch.tanh(x))
+        return x
+
+model = ModelWithBreak().cuda()
+dummy_input = torch.randn(32, 512, device='cuda')
+
+# Анализ графа
+print("=== Анализ графа ===")
+explanation = dynamo.explain(model)(dummy_input)
+print(f"Graph breaks detected: {explanation.graph_break_count}")
+print(f"Ops captured: {explanation.ops_per_graph}")
+
+# Компиляция и тест
+compiled = torch.compile(model, mode="default")
+_ = compiled(dummy_input)  # Первый запуск (компиляция)
+print("✅ Модель успешно скомпилирована без разрывов графа!")</code></pre>
+        </div>
+
+        <!-- Блок 3: Теория -->
+        <div id="theory-compile" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">📚 Graph Breaks Deep Dive: Почему они возникают</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; color: rgba(255,255,255,0.95);">
+                <h3 style="margin-top: 0; color: white;">TorchDynamo работает на уровне байт-кода Python:</h3>
+                <p>Компилятор анализирует инструкции CPython (LOAD_ATTR, CALL_FUNCTION и т.д.) и пытается сопоставить их с тензорными операциями. Когда встречается "непонятная" инструкция — происходит Graph Break.</p>
+                
+                <h4 style="color: white; margin-top: 20px;">🔴 Типичные причины разрывов:</h4>
+                <ul style="margin-left: 20px;">
+                    <li><code>x.numpy()</code> / <code>x.item()</code> — выход из мира тензоров в обычные Python-объекты</li>
+                    <li><code>print(x)</code>, <code>logging.info()</code> — сайд-эффекты, которые нельзя оптимизировать</li>
+                    <li><code>if x[0] > 0:</code> — условие, зависящее от <em>значения</em> тензора (а не от его формы)</li>
+                    <li>Вызовы сторонних библиотек: <code>scipy.fft()</code>, <code>cv2.resize()</code> и т.п.</li>
+                    <li>Динамическое создание слоев: <code>nn.Linear(in_features, out_features)</code> внутри forward</li>
+                </ul>
+
+                <h4 style="color: white; margin-top: 20px;">🟢 Как устранять разрывы:</h4>
+                <ol style="margin-left: 20px;">
+                    <li><strong>Заменяйте numpy на torch:</strong> <code>np.sum(x) → x.sum()</code>, <code>np.where → torch.where</code></li>
+                    <li><strong>Выносите логику из forward:</strong> Предварительные вычисления делайте до вызова модели</li>
+                    <li><strong>Используйте <code>torch._dynamo.allow_in_graph</code>:</strong> Для легаси-функций, которые нельзя переписать</li>
+                    <li><strong>Проверяйте через <code>torch._dynamo.explain</code>:</strong> Локализуйте разрывы до написания продакшен-кода</li>
+                </ol>
+
+                <div class="important" style="margin-top: 16px;">
+                    <strong>💡 Pro Tip:</strong> 
+                    Даже один Graph Break на итерацию может снизить ускорение с 3-5x до 1.1-1.3x. Всегда проверяйте чистоту графа перед деплоем скомпилированной модели!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция поддержки -->
+    <div class="glass-card support-section">
+        <div class="support-header"><h2>ПОДДЕРЖАТЬ ПРОЕКТ</h2></div>
+        <div class="heart-icon">💙</div>
+        <div class="support-text">
+            <p style="margin: 0; font-size: 1.1em;"><strong>Приложение бесплатное. Было и останется.</strong></p>
+            <p style="margin: 12px 0 0 0;">Если проект помог вам или вашим близким — можете поддержать разработку добровольным переводом.</p>
+        </div>
+        <div class="phone-section">
+            <h3 style="color: white; margin-bottom: 8px;">📱 ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА:</h3>
+            <div class="phone-number">8-920-227-56-76</div>
+            <button class="copy-btn" onclick="copyPhone()">📋 Копировать номер</button>
+            <div class="support-features">
+                <span class="feature-badge">✅ Мгновенно</span>
+                <span class="feature-badge">✅ Без комиссии</span>
+                <span class="feature-badge">✅ Безопасно</span>
+            </div>
+        </div>
+        <div style="text-align: center; margin: 20px 0;"><p style="font-size: 1.2em; color: white;"><strong>❤️ Спасибо за поддержку!</strong></p></div>
+        <a href="https://ancf-hue.github.io/" target="_blank" class="catalog-link">
+            <h3>Каталог бесплатных офлайн-приложений Anti-AI Shield</h3>
+            <p>Перейти в каталог</p>
+            <div class="catalog-url">https://ancf-hue.github.io/</div>
+        </a>
+        <img src="lesson-24-compile.png" alt="Model Compilation Visualization" class="decorative-image">
+    </div>
+
+    <!-- Навигация -->
+    <div class="glass-card" style="text-align: center;">
+        <div class="btn-group" style="justify-content: center;">
+            <a href="lesson-23.html" class="btn-3d">◀ Назад</a>
+            <a href="lesson-25.html" class="btn-3d primary">Финальный урок ▶</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleBlock(id, btn) {
+            const block = document.getElementById(id);
+            const isActive = block.classList.contains('active');
+            document.querySelectorAll('.code-block-container').forEach(el => el.classList.remove('active'));
+            if (!isActive) {
+                block.classList.add('active');
+                if(btn.textContent.includes('Шаблон')) btn.textContent = '📖 Закрыть шаблон';
+                else if(btn.textContent.includes('Решение')) btn.textContent = '📖 Закрыть решение';
+                else if(btn.textContent.includes('Теория')) btn.textContent = '📖 Закрыть теорию';
+                else btn.textContent = '📖 Закрыть';
+            } else {
+                if(id === 'template-compile') btn.textContent = '💻 Открыть шаблон кода';
+                else if(id === 'solution-compile') btn.textContent = '✅ Показать решение';
+                else if(id === 'theory-compile') btn.textContent = '📚 Теория: Graph Breaks Deep Dive';
+            }
+        }
+
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector(`[onclick="copyCode('${elementId}')"]`);
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            }).catch(() => alert("Не удалось скопировать код."));
+        }
+
+        function copyPhone() {
+            const phone = "8-920-227-56-76";
+            navigator.clipboard.writeText(phone).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                btn.style.background = 'rgba(16, 185, 129, 0.4)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                }, 2000);
+            }).catch(() => alert("Не удалось скопировать номер."));
+        }
+
+        window.addEventListener('load', () => {
+            document.querySelector('.progress-fill').style.width = '96%';
+        });
+    </script>
+</body>
+</html>

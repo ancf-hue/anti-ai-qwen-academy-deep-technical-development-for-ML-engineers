@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 4: Кастомные функции потерь | Anti-AI Qwen Academy</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        /* --- Основные стили (идентичны Урокам 1-3) --- */
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --secondary: #6c5ce7;
+            --accent: #00cec9;
+            --glass-bg: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.25);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --text-primary: #ffffff;
+            --text-secondary: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --important-bg: rgba(59, 130, 246, 0.15);
+            --warning-bg: rgba(245, 158, 11, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
+
+        .header-container { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; margin-bottom: 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
+        .page-logo { width: 48px; height: 48px; border-radius: 12px; object-fit: contain; background: rgba(255, 255, 255, 0.2); padding: 4px; }
+        
+        h1 { color: white; font-size: 1.8em; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .subtitle { color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin-top: 4px; }
+        
+        h2 { color: white; margin: 32px 0 16px; font-size: 1.5em; display: flex; align-items: center; gap: 10px; }
+        h2::before { content: "▍"; color: var(--accent); }
+        h3 { color: rgba(255, 255, 255, 0.95); margin: 24px 0 12px; font-size: 1.2em; }
+        p { color: rgba(255, 255, 255, 0.95); margin-bottom: 16px; }
+        
+        code { font-family: "Fira Code", "Courier New", monospace; background: rgba(0, 0, 0, 0.25); padding: 2px 6px; border-radius: 6px; font-size: 0.95em; color: #fbbf24; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 12px; overflow-x: auto; margin: 16px 0; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9em; line-height: 1.5; }
+        pre code { background: transparent; padding: 0; color: inherit; }
+        
+        .important, .warning { padding: 16px 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid; backdrop-filter: blur(8px); }
+        .important { background: var(--important-bg); border-left-color: #3b82f6; color: #eff6ff; }
+        .warning { background: var(--warning-bg); border-left-color: #f59e0b; color: #fffbeb; }
+        .important strong, .warning strong { display: block; margin-bottom: 4px; font-size: 1.05em; color: white; }
+        
+        .formula { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); padding: 16px; border-radius: 12px; font-family: "Georgia", serif; font-style: italic; text-align: center; margin: 20px 0; color: white; font-size: 1.1em; backdrop-filter: blur(8px); }
+        
+        ul { padding-left: 24px; margin: 16px 0; }
+        li { margin-bottom: 10px; color: rgba(255, 255, 255, 0.95); }
+        li::marker { color: var(--accent); font-weight: bold; }
+        strong { color: white; }
+        
+        .btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0; justify-content: center; }
+        .btn-3d {
+            position: relative; padding: 14px 28px; font-size: 1em; font-weight: 600; color: white;
+            background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.15s ease; user-select: none;
+        }
+        .btn-3d:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15), 0 12px 28px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+        .btn-3d:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-3d.primary { background: linear-gradient(145deg, rgba(26,115,232,0.4), rgba(26,115,232,0.2)); border-color: rgba(26, 115, 232, 0.5); }
+        .btn-3d.success { background: linear-gradient(145deg, rgba(16,185,129,0.4), rgba(16,185,129,0.2)); border-color: rgba(16, 185, 129, 0.5); }
+        .btn-3d::after { content: ""; position: absolute; top: 4px; left: 4px; right: 4px; height: 40%; background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent); border-radius: 12px 12px 50% 50%; pointer-events: none; }
+
+        .progress-bar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(0, 0, 0, 0.15); border-radius: 12px; margin: 20px 0; }
+        .progress-bar span { color: white; font-weight: 500; }
+        .progress-track { flex: 1; height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--secondary)); border-radius: 4px; transition: width 1s ease; }
+        
+        .code-block-container { display: none; margin-top: 16px; animation: fadeIn 0.3s ease; }
+        .code-block-container.active { display: block; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .code-title { color: white; font-weight: 600; font-size: 0.95em; }
+        .copy-code-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8em; transition: all 0.2s; }
+        .copy-code-btn:hover { background: rgba(255,255,255,0.25); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .support-section { background: linear-gradient(145deg, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.15)); border: 2px solid rgba(236, 72, 153, 0.4); }
+        .support-header { text-align: center; margin-bottom: 24px; }
+        .support-header h2 { justify-content: center; font-size: 1.8em; margin-bottom: 8px; }
+        .support-header h2::before { content: "🤝"; margin-right: 10px; color: white; }
+        .heart-icon { font-size: 3em; text-align: center; margin: 16px 0; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .support-text { background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; margin: 16px 0; text-align: center; }
+        .phone-section { background: rgba(16, 185, 129, 0.15); border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; }
+        .phone-number { font-size: 1.8em; font-weight: bold; color: white; margin: 12px 0; font-family: "Fira Code", monospace; letter-spacing: 2px; }
+        .copy-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; margin: 8px; transition: all 0.2s; }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+        .support-features { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+        .feature-badge { background: rgba(16, 185, 129, 0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.85em; color: white; }
+        .catalog-link { background: linear-gradient(145deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; text-decoration: none; display: block; transition: all 0.3s; }
+        .catalog-link:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4); }
+        .catalog-link h3 { color: white; margin: 0 0 8px 0; font-size: 1.3em; }
+        .catalog-link h3::before { content: "🌟 "; }
+        .catalog-link p { color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 0.95em; }
+        .catalog-url { background: rgba(0, 0, 0, 0.3); padding: 8px 12px; border-radius: 8px; font-family: "Fira Code", monospace; font-size: 0.85em; color: #fbbf24; margin-top: 12px; display: inline-block; word-break: break-all; }
+        
+        .decorative-image { width: 100%; max-width: 600px; margin: 24px auto; display: block; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .glass-card { padding: 20px; border-radius: 16px; }
+            h1 { font-size: 1.5em; }
+            .btn-group { flex-direction: column; }
+            .btn-3d { width: 100%; justify-content: center; }
+            .phone-number { font-size: 1.4em; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Шапка -->
+    <div class="glass-card header-container">
+        <img src="favicon.ico" alt="Логотип" class="page-logo">
+        <div>
+            <h1>Урок 4: Кастомные функции потерь (Loss Functions)</h1>
+            <div class="subtitle">ML-инженер • Архитектура нейросетей с нуля</div>
+        </div>
+    </div>
+
+    <!-- Прогресс -->
+    <div class="glass-card progress-bar">
+        <span>Прогресс курса:</span>
+        <div class="progress-track"><div class="progress-fill"></div></div>
+        <span>4/25</span>
+    </div>
+
+    <!-- Введение -->
+    <div class="glass-card">
+        <p>Функция потерь (Loss Function) определяет математический ландшафт, по которому оптимизатор ведет нейросеть к глобальному минимуму. Стандартных лоссов (MSE, Cross-Entropy) часто не хватает для специфических задач хардкорной разработки. Этот урок научит вас проектировать кастомные функции потерь на чистом тензорном коде.</p>
+        
+        <div class="important">
+            <strong>🔑 Золотое правило кастомного лосса:</strong> 
+            Функция потерь обязана быть непрерывной и дифференцируемой во всех точках своего подмножества, иначе <code>backward()</code> не сможет рассчитать градиенты. Любое ветвление (например, через <code>if/else</code>) должно быть заменено на логические маски или тензорные функции PyTorch.
+        </div>
+    </div>
+
+    <!-- Раздел 1 -->
+    <div class="glass-card">
+        <h2>1. Почему важно писать свои лоссы? Пример: Дисбаланс классов</h2>
+        <p>Представьте, что вы обучаете нейросеть находить редкие дефекты на производстве (1 бракованная деталь на 10 000 нормальных). Обычная бинарная кросс-энтропия (BCELoss) заставит модель просто всегда говорить «дефектов нет», выдав ложную точность в 99.99%. Чтобы исправить это поведение, инженеры модифицируют формулу ошибки.</p>
+    </div>
+
+    <!-- Раздел 2 -->
+    <div class="glass-card">
+        <h2>2. Разбор Focal Loss: Математика</h2>
+        <p>Focal Loss — это эволюция кросс-энтропии, которая снижает вклад легко классифицируемых (уверенных) примеров и заставляет модель фокусироваться на сложных, редких объектах. Формула вводит модулирующий множитель с параметром сглаживания <code>γ</code>:</p>
+        <div class="formula">
+            FL(p_t) = -α_t · (1 - p_t)^γ · log(p_t)
+        </div>
+        <p>Если модель уверена в правильном классе (вероятность <code>p_t</code> близка к 1), то множитель <code>(1 - p_t)^γ</code> стремится к 0, обнуляя ошибку для этого примера.</p>
+    </div>
+
+    <!-- Раздел 3 -->
+    <div class="glass-card">
+        <h2>3. Реализация Focal Loss в PyTorch (ООП подход)</h2>
+        <p>Правильный способ создания кастомного лосса в рамках экосистемы PyTorch — наследование от базового класса <code>torch.nn.Module</code>.</p>
+
+        <pre><code>import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=1.0, gamma=2.0, reduction='mean'):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        # inputs: логиты модели (выходы без софтмакса) формы [B, C]
+        # targets: истинные индексы классов формы [B]
+        
+        # Вычисляем логарифм вероятностей через численно стабильный log_softmax
+        log_prob = F.log_softmax(inputs, dim=-1)
+        prob = torch.exp(log_prob)
+        
+        # Собираем только те вероятности, которые соответствуют правильным классам
+        gathered_log_prob = log_prob.gather(dim=-1, index=targets.unsqueeze(-1)).squeeze(-1)
+        gathered_prob = prob.gather(dim=-1, index=targets.unsqueeze(-1)).squeeze(-1)
+        
+        # Математический расчет Focal Loss
+        loss = -self.alpha * ((1 - gathered_prob) ** self.gamma) * gathered_log_prob
+        
+        # Агрегация батча (усреднение или суммирование)
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'sum':
+            return loss.sum()
+        return loss</code></pre>
+    </div>
+
+    <!-- Раздел 4 -->
+    <div class="glass-card">
+        <h2>4. Численная стабильность (Ловушка для новичков)</h2>
+        <p>При написании математических операций, содержащих логарифмы (<code>log</code>) или экспоненты (<code>exp</code>), легко получить ошибку <code>NaN</code> (Not a Number) из-за деления на ноль или переполнения типов данных.</p>
+        
+        <div class="important">
+            <strong> Инженерный лайфхак:</strong> 
+            Никогда не делайте <code>torch.log(torch.softmax(x))</code>. Всегда используйте готовую функцию <code>F.log_softmax(x)</code>. Внутри неё на уровне C++ кода применяется трюк <em>Log-Sum-Exp</em>, защищающий вычисления от потери точности.
+        </div>
+    </div>
+
+    <!-- Практика с РАБОТАЮЩИМИ кнопками -->
+    <div class="glass-card">
+        <h2>🎯 Практическое задание</h2>
+        <p>Реализуйте кастомную функцию потерь <strong>Huber Loss</strong> (также известную как Smooth L1 Loss). Математическая логика: если абсолютная ошибка предсказания меньше заданного порога <code>δ</code>, лосс должен вести себя как квадратичная ошибка (MSE). Если ошибка больше <code>δ</code> — лосс переходит в линейную ошибку (MAE). Используйте логические маски (например, <code>torch.where</code>) для реализации ветвления без разрушения градиентного графа.</p>
+        
+        <div class="btn-group">
+            <button class="btn-3d primary" onclick="toggleBlock('template-huber', this)">💻 Открыть шаблон кода</button>
+            <button class="btn-3d success" onclick="toggleBlock('solution-huber', this)">✅ Показать решение</button>
+            <button class="btn-3d" onclick="toggleBlock('theory-huber', this)">📚 Теория: torch.where</button>
+        </div>
+
+        <!-- Блок 1: Шаблон Huber -->
+        <div id="template-huber" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title"> Шаблон (huber_starter.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-template-huber')"> Копировать</button>
+            </div>
+            <pre id="code-template-huber"><code>import torch
+
+def custom_huber_loss(preds, targets, delta=1.0):
+    """
+    Реализация Huber Loss (Smooth L1).
+    Если |error| < delta -> 0.5 * error^2
+    Если |error| >= delta -> delta * (|error| - 0.5 * delta)
+    """
+    # 1. Вычислите ошибку
+    error = preds - targets
+    
+    # 2. Вычислите абсолютную ошибку
+    abs_error = torch.abs(error)
+    
+    # 3. Используйте torch.where для выбора формулы в зависимости от delta
+    # ВАШ КОД ЗДЕСЬ
+    
+    return loss
+
+# --- Тестирование ---
+if __name__ == "__main__":
+    preds = torch.tensor([1.0, 2.0, 5.0], requires_grad=True)
+    targets = torch.tensor([1.5, 2.0, 10.0])
+    
+    # delta=1.0. Ошибки: 0.5 (малая), 0 (малая), 5.0 (большая)
+    loss = custom_huber_loss(preds, targets, delta=1.0)
+    print("Huber Loss:", loss.item())
+    
+    loss.backward()
+    print("Градиенты:", preds.grad)</code></pre>
+        </div>
+
+        <!-- Блок 2: Решение Huber -->
+        <div id="solution-huber" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">✅ Готовое решение (huber_solution.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-solution-huber')">📋 Копировать</button>
+            </div>
+            <pre id="code-solution-huber"><code>import torch
+
+def custom_huber_loss(preds, targets, delta=1.0):
+    error = preds - targets
+    abs_error = torch.abs(error)
+    
+    # Условие: где ошибка меньше дельты?
+    mask = abs_error < delta
+    
+    # MSE часть (квадратичная)
+    quadratic = 0.5 * error ** 2
+    
+    # MAE часть (линейная)
+    linear = delta * (abs_error - 0.5 * delta)
+    
+    # Выбираем значение в зависимости от маски
+    loss = torch.where(mask, quadratic, linear)
+    
+    return loss.mean()
+
+if __name__ == "__main__":
+    preds = torch.tensor([1.0, 2.0, 5.0], requires_grad=True)
+    targets = torch.tensor([1.5, 2.0, 10.0])
+    
+    loss = custom_huber_loss(preds, targets, delta=1.0)
+    print("Huber Loss:", loss.item())  # ~2.375
+    
+    loss.backward()
+    print("Градиенты:", preds.grad)
+    # Градиент будет 0.5 для первой ошибки (MSE), 
+    # и sign(error)*delta для большой ошибки (MAE)</code></pre>
+        </div>
+
+        <!-- Блок 3: Теория -->
+        <div id="theory-huber" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">📚 torch.where и логические маски</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; color: rgba(255,255,255,0.95);">
+                <h3 style="margin-top: 0; color: white;">Как заменить if/else в тензорах?</h3>
+                <p>В Python мы пишем <code>if x > 0: ... else: ...</code>. В PyTorch такие конструкции разрывают граф вычислений. Вместо этого мы используем <strong>маски</strong>.</p>
+                
+                <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; margin: 16px 0;">
+                    <strong>Синтаксис:</strong><br>
+                    <code>result = torch.where(condition, x, y)</code>
+                </div>
+
+                <ul style="margin-left: 20px;">
+                    <li><strong>condition:</strong> Тензор булевых значений (True/False) той же формы, что и данные.</li>
+                    <li><strong>x:</strong> Значения, которые будут выбраны там, где condition == True.</li>
+                    <li><strong>y:</strong> Значения, которые будут выбраны там, где condition == False.</li>
+                </ul>
+
+                <div class="important" style="margin-top: 16px;">
+                    <strong>💡 Почему это работает?</strong> 
+                    Функция <code>torch.where</code> дифференцируема. PyTorch знает, как вычислять градиенты для обоих вариантов (x и y), и передает градиент только через те элементы, которые были выбраны.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция поддержки -->
+    <div class="glass-card support-section">
+        <div class="support-header"><h2>ПОДДЕРЖАТЬ ПРОЕКТ</h2></div>
+        <div class="heart-icon">💙</div>
+        <div class="support-text">
+            <p style="margin: 0; font-size: 1.1em;"><strong>Приложение бесплатное. Было и останется.</strong></p>
+            <p style="margin: 12px 0 0 0;">Если проект помог вам или вашим близким — можете поддержать разработку добровольным переводом.</p>
+        </div>
+        <div class="phone-section">
+            <h3 style="color: white; margin-bottom: 8px;">📱 ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА:</h3>
+            <div class="phone-number">8-920-227-56-76</div>
+            <button class="copy-btn" onclick="copyPhone()">📋 Копировать номер</button>
+            <div class="support-features">
+                <span class="feature-badge">✅ Мгновенно</span>
+                <span class="feature-badge">✅ Без комиссии</span>
+                <span class="feature-badge">✅ Безопасно</span>
+            </div>
+        </div>
+        <div style="text-align: center; margin: 20px 0;"><p style="font-size: 1.2em; color: white;"><strong>❤️ Спасибо за поддержку!</strong></p></div>
+        <a href="https://ancf-hue.github.io/" target="_blank" class="catalog-link">
+            <h3>Каталог бесплатных офлайн-приложений Anti-AI Shield</h3>
+            <p>Перейти в каталог</p>
+            <div class="catalog-url">https://ancf-hue.github.io/</div>
+        </a>
+        <img src="lesson-04-loss.png" alt="Loss Landscape Visualization" class="decorative-image">
+    </div>
+
+    <!-- Навигация -->
+    <div class="glass-card" style="text-align: center;">
+        <div class="btn-group" style="justify-content: center;">
+            <a href="lesson-03.html" class="btn-3d">◀ Урок 3: Оптимизаторы</a>
+            <a href="lesson-05.html" class="btn-3d primary">Урок 5: Слои нейросетей ▶</a>
+        </div>
+    </div>
+
+    <script>
+        // Функция переключения блоков
+        function toggleBlock(id, btn) {
+            const block = document.getElementById(id);
+            const isActive = block.classList.contains('active');
+            
+            document.querySelectorAll('.code-block-container').forEach(el => el.classList.remove('active'));
+            
+            if (!isActive) {
+                block.classList.add('active');
+                if(btn.textContent.includes('Шаблон')) btn.textContent = '📖 Закрыть шаблон';
+                else if(btn.textContent.includes('Решение')) btn.textContent = '📖 Закрыть решение';
+                else if(btn.textContent.includes('Теория')) btn.textContent = '📖 Закрыть теорию';
+                else btn.textContent = '📖 Закрыть';
+            } else {
+                if(id === 'template-huber') btn.textContent = '💻 Открыть шаблон кода';
+                else if(id === 'solution-huber') btn.textContent = '✅ Показать решение';
+                else if(id === 'theory-huber') btn.textContent = ' Теория: torch.where';
+            }
+        }
+
+        // Копирование кода
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector(`[onclick="copyCode('${elementId}')"]`);
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            }).catch(() => {
+                alert("Не удалось скопировать код.");
+            });
+        }
+
+        // Копирование телефона
+        function copyPhone() {
+            const phone = "8-920-227-56-76";
+            navigator.clipboard.writeText(phone).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                btn.style.background = 'rgba(16, 185, 129, 0.4)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                }, 2000);
+            }).catch(() => {
+                alert("Не удалось скопировать номер.");
+            });
+        }
+
+        // Анимация прогресса
+        window.addEventListener('load', () => {
+            document.querySelector('.progress-fill').style.width = '16%';
+        });
+    </script>
+</body>
+</html>

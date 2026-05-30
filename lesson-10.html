@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 10: Пайплайны данных и кастомные Датасеты | Anti-AI Qwen Academy</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --secondary: #6c5ce7;
+            --accent: #00cec9;
+            --glass-bg: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.25);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --text-primary: #ffffff;
+            --text-secondary: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --important-bg: rgba(59, 130, 246, 0.15);
+            --warning-bg: rgba(245, 158, 11, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
+
+        .header-container { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; margin-bottom: 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
+        .page-logo { width: 48px; height: 48px; border-radius: 12px; object-fit: contain; background: rgba(255, 255, 255, 0.2); padding: 4px; }
+        
+        h1 { color: white; font-size: 1.8em; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .subtitle { color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin-top: 4px; }
+        
+        h2 { color: white; margin: 32px 0 16px; font-size: 1.5em; display: flex; align-items: center; gap: 10px; }
+        h2::before { content: "▍"; color: var(--accent); }
+        h3 { color: rgba(255, 255, 255, 0.95); margin: 24px 0 12px; font-size: 1.2em; }
+        p { color: rgba(255, 255, 255, 0.95); margin-bottom: 16px; }
+        
+        code { font-family: "Fira Code", "Courier New", monospace; background: rgba(0, 0, 0, 0.25); padding: 2px 6px; border-radius: 6px; font-size: 0.95em; color: #fbbf24; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 12px; overflow-x: auto; margin: 16px 0; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9em; line-height: 1.5; }
+        pre code { background: transparent; padding: 0; color: inherit; }
+        
+        .important, .warning { padding: 16px 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid; backdrop-filter: blur(8px); }
+        .important { background: var(--important-bg); border-left-color: #3b82f6; color: #eff6ff; }
+        .warning { background: var(--warning-bg); border-left-color: #f59e0b; color: #fffbeb; }
+        .important strong, .warning strong { display: block; margin-bottom: 4px; font-size: 1.05em; color: white; }
+        
+        ul { padding-left: 24px; margin: 16px 0; }
+        li { margin-bottom: 10px; color: rgba(255, 255, 255, 0.95); }
+        li::marker { color: var(--accent); font-weight: bold; }
+        strong { color: white; }
+        
+        .btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0; justify-content: center; }
+        .btn-3d {
+            position: relative; padding: 14px 28px; font-size: 1em; font-weight: 600; color: white;
+            background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.15s ease; user-select: none;
+        }
+        .btn-3d:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15), 0 12px 28px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+        .btn-3d:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-3d.primary { background: linear-gradient(145deg, rgba(26,115,232,0.4), rgba(26,115,232,0.2)); border-color: rgba(26, 115, 232, 0.5); }
+        .btn-3d.success { background: linear-gradient(145deg, rgba(16,185,129,0.4), rgba(16,185,129,0.2)); border-color: rgba(16, 185, 129, 0.5); }
+        .btn-3d::after { content: ""; position: absolute; top: 4px; left: 4px; right: 4px; height: 40%; background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent); border-radius: 12px 12px 50% 50%; pointer-events: none; }
+
+        .progress-bar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(0, 0, 0, 0.15); border-radius: 12px; margin: 20px 0; }
+        .progress-bar span { color: white; font-weight: 500; }
+        .progress-track { flex: 1; height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--secondary)); border-radius: 4px; transition: width 1s ease; }
+        
+        .code-block-container { display: none; margin-top: 16px; animation: fadeIn 0.3s ease; }
+        .code-block-container.active { display: block; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .code-title { color: white; font-weight: 600; font-size: 0.95em; }
+        .copy-code-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8em; transition: all 0.2s; }
+        .copy-code-btn:hover { background: rgba(255,255,255,0.25); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .support-section { background: linear-gradient(145deg, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.15)); border: 2px solid rgba(236, 72, 153, 0.4); }
+        .support-header { text-align: center; margin-bottom: 24px; }
+        .support-header h2 { justify-content: center; font-size: 1.8em; margin-bottom: 8px; }
+        .support-header h2::before { content: "🤝"; margin-right: 10px; color: white; }
+        .heart-icon { font-size: 3em; text-align: center; margin: 16px 0; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .support-text { background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; margin: 16px 0; text-align: center; }
+        .phone-section { background: rgba(16, 185, 129, 0.15); border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; }
+        .phone-number { font-size: 1.8em; font-weight: bold; color: white; margin: 12px 0; font-family: "Fira Code", monospace; letter-spacing: 2px; }
+        .copy-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; margin: 8px; transition: all 0.2s; }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+        .support-features { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+        .feature-badge { background: rgba(16, 185, 129, 0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.85em; color: white; }
+        .catalog-link { background: linear-gradient(145deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; text-decoration: none; display: block; transition: all 0.3s; }
+        .catalog-link:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4); }
+        .catalog-link h3 { color: white; margin: 0 0 8px 0; font-size: 1.3em; }
+        .catalog-link h3::before { content: "🌟 "; }
+        .catalog-link p { color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 0.95em; }
+        .catalog-url { background: rgba(0, 0, 0, 0.3); padding: 8px 12px; border-radius: 8px; font-family: "Fira Code", monospace; font-size: 0.85em; color: #fbbf24; margin-top: 12px; display: inline-block; word-break: break-all; }
+        
+        .decorative-image { width: 100%; max-width: 600px; margin: 24px auto; display: block; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .glass-card { padding: 20px; border-radius: 16px; }
+            h1 { font-size: 1.5em; }
+            .btn-group { flex-direction: column; }
+            .btn-3d { width: 100%; justify-content: center; }
+            .phone-number { font-size: 1.4em; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Шапка -->
+    <div class="glass-card header-container">
+        <img src="favicon.ico" alt="Логотип" class="page-logo">
+        <div>
+            <h1>Урок 10: Пайплайны данных и кастомные Датасеты</h1>
+            <div class="subtitle">ML-инженер • Архитектура нейросетей с нуля</div>
+        </div>
+    </div>
+
+    <!-- Прогресс -->
+    <div class="glass-card progress-bar">
+        <span>Прогресс курса:</span>
+        <div class="progress-track"><div class="progress-fill"></div></div>
+        <span>10/25</span>
+    </div>
+
+    <!-- Введение -->
+    <div class="glass-card">
+        <p>Даже самая совершенная архитектура нейросети бесполезна, если видеокарта простаивает в ожидании данных. Процесс подготовки батчей на CPU часто становится главным узким местом (bottleneck) обучения. На этом уроке мы разберем, как писать быстрые, асинхронные пайплайны данных, и как правильно упаковывать последовательности разной длины для рекуррентных сетей.</p>
+        
+        <div class="important">
+            <strong>🔑 Концепция Dataset и DataLoader:</strong> 
+            В PyTorch подготовка данных разделена на два этапа. Класс <code>Dataset</code> отвечает за то, как загрузить и обработать <em>один конкретный пример</em> по его индексу. Класс <code>DataLoader</code> отвечает за стратегию: как объединить эти примеры в батч, перемешать их, распараллелить загрузку на несколько ядер процессора и передать в VRAM.
+        </div>
+    </div>
+
+    <!-- Раздел 1 -->
+    <div class="glass-card">
+        <h2>1. Проектирование кастомного Dataset</h2>
+        <p>Для создания своего датасета необходимо унаследоваться от абстрактного класса <code>torch.utils.data.Dataset</code> и строго переопределить три метода: <code>__init__</code> (инициализация путей, загрузка метаданных), <code>__len__</code> (возвращает общий размер датасета) и <code>__getitem__</code> (логика чтения файла с диска, аугментация и приведение к тензору).</p>
+
+        <pre><code>import torch
+from torch.utils.data import Dataset, DataLoader
+
+class CustomTextDataset(Dataset):
+    def __init__(self, texts, labels):
+        # Храним данные (в реальном коде здесь могут быть пути к файлам картинок/аудио)
+        self.texts = texts
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        # Извлекаем сырые данные
+        raw_text = self.texts[idx]
+        label = self.labels[idx]
+        
+        # Пример простейшей обработки текста: разбиение на токены и замена на фиктивные ID
+        # В Production здесь вызывается токенизатор или трансформация картинок (albumentations)
+        tokens = [len(word) for word in raw_text.split()] 
+        token_tensor = torch.tensor(tokens, dtype=torch.long)
+        label_tensor = torch.tensor(label, dtype=torch.long)
+        
+        return token_tensor, label_tensor</code></pre>
+    </div>
+
+    <!-- Раздел 2 -->
+    <div class="glass-card">
+        <h2>2. Проблема последовательностей разной длины: Функция Collate</h2>
+        <p>Стандартный <code>DataLoader</code> пытается объединить тензоры с помощью <code>torch.stack</code>. Если один текст состоит из 5 слов, а второй из 10, операция упадет с ошибкой размерностей. Чтобы решить это, используется кастомная функция сборки батча — <strong>collate_fn</strong>. Она дополняет короткие последовательности специальными токенами заполнения (Padding) до длины самого длинного элемента в текущем батче.</p>
+
+        <pre><code>from torch.nn.utils.rnn import pad_sequence
+
+def custom_collate_fn(batch):
+    # batch — это список кортежей, которые вернул __getitem__: [(tensor_1, label_1), (tensor_2, label_2), ...]
+    features = [item[0] for item in batch]
+    labels = [item[1] for item in batch]
+    
+    # pad_sequence автоматически выравнивает тензоры, заполняя пустоты нулями (padding value = 0)
+    # batch_first=True задает форму [Batch_Size, Max_Sequence_Length]
+    features_padded = pad_sequence(features, batch_first=True, padding_value=0)
+    labels_tensor = torch.stack(labels)
+    
+    return features_padded, labels_tensor</code></pre>
+    </div>
+
+    <!-- Раздел 3 -->
+    <div class="glass-card">
+        <h2>3. Оптимизация скорости: Профилирование DataLoader</h2>
+        <div class="warning">
+            <strong>⚠️ Ошибка новичка:</strong> Использование дефолтных настроек DataLoader на тяжелых данных. Если <code>num_workers=0</code>, загрузка данных идет в том же главном потоке, что и вычисления нейросети. Пока процессор читает картинку с диска, дорогостоящая GPU простаивает без дела.
+        </div>
+        
+        <p>Параметры для максимальной производительности в Production:</p>
+        <ul>
+            <li><code>num_workers</code>: Количество параллельных процессов CPU для подготовки данных. Золотая середина — число ядер вашего процессора (или количество GPU × 4).</li>
+            <li><code>pin_memory=True</code>: Резервирует батчи в специальной «привязанной» оперативной памяти, что значительно ускоряет копирование тензоров с CPU на GPU через шину PCIe.</li>
+        </ul>
+
+        <pre><code># Сборка финального пайплайна
+raw_data = ["Глубокое обучение это весело", "ML инженер создает архитектуры", "Тензоры"]
+raw_labels = [1, 1, 0]
+
+dataset = CustomTextDataset(raw_data, raw_labels)
+
+dataloader = DataLoader(
+    dataset,
+    batch_size=2,
+    shuffle=True,
+    num_workers=2,          # Распараллеливание на 2 ядра CPU
+    pin_memory=True,        # Ускорение передачи на GPU
+    collate_fn=custom_collate_fn # Кастомная сборка батча с паддингом
+)
+
+for x_batch, y_batch in dataloader:
+    print("Форма батча признаков (с паддингом):", x_batch.shape)
+    print("Батч таргетов:", y_batch)</code></pre>
+    </div>
+
+    <!-- Практика с РАБОТАЮЩИМИ кнопками -->
+    <div class="glass-card">
+        <h2>🎯 Практическое задание</h2>
+        <p>Модифицируйте функцию <code>custom_collate_fn</code>. Помимо возвращения дополненного тензора <code>features_padded</code>, она должна генерировать и возвращать <strong>бинарную маску внимания (Attention Mask)</strong> той же формы. Маска должна содержать <code>1</code> там, где находятся реальные данные, и <code>0</code> там, где был применен Padding. Такие маски критически важны для того, чтобы современные трансформеры не тратили вычислительные ресурсы на обработку пустых нулевых токенов.</p>
+        
+        <div class="btn-group">
+            <button class="btn-3d primary" onclick="toggleBlock('template-data', this)">💻 Открыть шаблон кода</button>
+            <button class="btn-3d success" onclick="toggleBlock('solution-data', this)">✅ Показать решение</button>
+            <button class="btn-3d" onclick="toggleBlock('theory-data', this)">📚 Теория: Attention Mask</button>
+        </div>
+
+        <!-- Блок 1: Шаблон -->
+        <div id="template-data" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">📝 Шаблон (collate_mask_starter.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-template-data')">📋 Копировать</button>
+            </div>
+            <pre id="code-template-data"><code>import torch
+from torch.nn.utils.rnn import pad_sequence
+
+def custom_collate_fn_with_mask(batch):
+    features = [item[0] for item in batch]
+    labels = [item[1] for item in batch]
+    
+    # 1. Выравниваем последовательности паддингом (padding_value=0)
+    features_padded = pad_sequence(features, batch_first=True, padding_value=0)
+    labels_tensor = torch.stack(labels)
+    
+    # 2. Генерируем Attention Mask
+    # ВАШ КОД ЗДЕСЬ: создайте тензор той же формы, где 1 - реальные данные, 0 - паддинг
+    
+    return features_padded, labels_tensor, attention_mask</code></pre>
+        </div>
+
+        <!-- Блок 2: Решение -->
+        <div id="solution-data" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">✅ Готовое решение (collate_mask_solution.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-solution-data')">📋 Копировать</button>
+            </div>
+            <pre id="code-solution-data"><code>import torch
+from torch.nn.utils.rnn import pad_sequence
+
+def custom_collate_fn_with_mask(batch):
+    features = [item[0] for item in batch]
+    labels = [item[1] for item in batch]
+    
+    # 1. Выравниваем последовательности паддингом (padding_value=0)
+    features_padded = pad_sequence(features, batch_first=True, padding_value=0)
+    labels_tensor = torch.stack(labels)
+    
+    # 2. Генерируем Attention Mask
+    # Так как паддинг заполнен нулями, маска = 1 везде, где тензор != 0
+    attention_mask = (features_padded != 0).long()
+    
+    return features_padded, labels_tensor, attention_mask
+
+# Пример использования:
+# mask будет иметь вид: [[1, 1, 1, 0, 0], [1, 1, 1, 1, 1]]</code></pre>
+        </div>
+
+        <!-- Блок 3: Теория -->
+        <div id="theory-data" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title"> Зачем нужна Attention Mask?</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; color: rgba(255,255,255,0.95);">
+                <h3 style="margin-top: 0; color: white;">Проблема Padding токенов</h3>
+                <p>При обработке текста или аудио мы вынуждены дополнять короткие примеры нулями до длины самого длинного в батче. Для нейросети эти нули — просто числа. Если не сообщить модели, где данные закончились, она начнет:</p>
+                <ol style="margin-left: 20px;">
+                    <li>Считать Self-Attention между реальными токенами и нулевыми паддингами (шум).</li>
+                    <li>Включать паддинги в расчет функции потерь (Loss), искажая градиенты.</li>
+                </ol>
+                
+                <div class="formula" style="text-align: left; padding: 16px; margin: 16px 0;">
+                    <strong>Решение:</strong><br>
+                    Attention Mask = 1 для реальных данных<br>
+                    Attention Mask = 0 для Padding<br>
+                    Модель использует маску, чтобы игнорировать нули при вычислении softmax и Loss.
+                </div>
+
+                <div class="important" style="margin-top: 16px;">
+                    <strong>💡 В трансформерах (BERT, GPT, Llama):</strong> 
+                    Маска передается в модель явно. В сверточных сетях паддинг часто игнорируется автоматически, но в RNN/Transformers маска обязательна для корректного обучения и инференса.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция поддержки -->
+    <div class="glass-card support-section">
+        <div class="support-header"><h2>ПОДДЕРЖАТЬ ПРОЕКТ</h2></div>
+        <div class="heart-icon">💙</div>
+        <div class="support-text">
+            <p style="margin: 0; font-size: 1.1em;"><strong>Приложение бесплатное. Было и останется.</strong></p>
+            <p style="margin: 12px 0 0 0;">Если проект помог вам или вашим близким — можете поддержать разработку добровольным переводом.</p>
+        </div>
+        <div class="phone-section">
+            <h3 style="color: white; margin-bottom: 8px;">📱 ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА:</h3>
+            <div class="phone-number">8-920-227-56-76</div>
+            <button class="copy-btn" onclick="copyPhone()">📋 Копировать номер</button>
+            <div class="support-features">
+                <span class="feature-badge">✅ Мгновенно</span>
+                <span class="feature-badge">✅ Без комиссии</span>
+                <span class="feature-badge">✅ Безопасно</span>
+            </div>
+        </div>
+        <div style="text-align: center; margin: 20px 0;"><p style="font-size: 1.2em; color: white;"><strong>❤️ Спасибо за поддержку!</strong></p></div>
+        <a href="https://ancf-hue.github.io/" target="_blank" class="catalog-link">
+            <h3>Каталог бесплатных офлайн-приложений Anti-AI Shield</h3>
+            <p>Перейти в каталог</p>
+            <div class="catalog-url">https://ancf-hue.github.io/</div>
+        </a>
+        <img src="lesson-10-datasets.png" alt="Data Pipeline Visualization" class="decorative-image">
+    </div>
+
+    <!-- Навигация -->
+    <div class="glass-card" style="text-align: center;">
+        <div class="btn-group" style="justify-content: center;">
+            <a href="lesson-09.html" class="btn-3d">◀ Назад</a>
+            <a href="lesson-11.html" class="btn-3d primary">Следующий урок ▶</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleBlock(id, btn) {
+            const block = document.getElementById(id);
+            const isActive = block.classList.contains('active');
+            document.querySelectorAll('.code-block-container').forEach(el => el.classList.remove('active'));
+            if (!isActive) {
+                block.classList.add('active');
+                if(btn.textContent.includes('Шаблон')) btn.textContent = '📖 Закрыть шаблон';
+                else if(btn.textContent.includes('Решение')) btn.textContent = '📖 Закрыть решение';
+                else if(btn.textContent.includes('Теория')) btn.textContent = '📖 Закрыть теорию';
+                else btn.textContent = ' Закрыть';
+            } else {
+                if(id === 'template-data') btn.textContent = '💻 Открыть шаблон кода';
+                else if(id === 'solution-data') btn.textContent = '✅ Показать решение';
+                else if(id === 'theory-data') btn.textContent = '📚 Теория: Attention Mask';
+            }
+        }
+
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector(`[onclick="copyCode('${elementId}')"]`);
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            }).catch(() => alert("Не удалось скопировать код."));
+        }
+
+        function copyPhone() {
+            const phone = "8-920-227-56-76";
+            navigator.clipboard.writeText(phone).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                btn.style.background = 'rgba(16, 185, 129, 0.4)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                }, 2000);
+            }).catch(() => alert("Не удалось скопировать номер."));
+        }
+
+        window.addEventListener('load', () => {
+            document.querySelector('.progress-fill').style.width = '40%';
+        });
+    </script>
+</body>
+</html>

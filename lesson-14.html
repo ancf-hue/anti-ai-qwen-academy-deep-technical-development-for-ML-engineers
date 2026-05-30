@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 14: Диффузионные модели | Anti-AI Qwen Academy</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        /* --- Основные стили (идентичны предыдущим урокам) --- */
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --secondary: #6c5ce7;
+            --accent: #00cec9;
+            --glass-bg: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.25);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --text-primary: #ffffff;
+            --text-secondary: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --important-bg: rgba(59, 130, 246, 0.15);
+            --warning-bg: rgba(245, 158, 11, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
+
+        .header-container { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; margin-bottom: 24px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
+        .page-logo { width: 48px; height: 48px; border-radius: 12px; object-fit: contain; background: rgba(255, 255, 255, 0.2); padding: 4px; }
+        
+        h1 { color: white; font-size: 1.8em; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        .subtitle { color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin-top: 4px; }
+        
+        h2 { color: white; margin: 32px 0 16px; font-size: 1.5em; display: flex; align-items: center; gap: 10px; }
+        h2::before { content: "▍"; color: var(--accent); }
+        h3 { color: rgba(255, 255, 255, 0.95); margin: 24px 0 12px; font-size: 1.2em; }
+        p { color: rgba(255, 255, 255, 0.95); margin-bottom: 16px; }
+        
+        code { font-family: "Fira Code", "Courier New", monospace; background: rgba(0, 0, 0, 0.25); padding: 2px 6px; border-radius: 6px; font-size: 0.95em; color: #fbbf24; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 12px; overflow-x: auto; margin: 16px 0; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9em; line-height: 1.5; }
+        pre code { background: transparent; padding: 0; color: inherit; }
+        
+        .important, .warning { padding: 16px 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid; backdrop-filter: blur(8px); }
+        .important { background: var(--important-bg); border-left-color: #3b82f6; color: #eff6ff; }
+        .warning { background: var(--warning-bg); border-left-color: #f59e0b; color: #fffbeb; }
+        .important strong, .warning strong { display: block; margin-bottom: 4px; font-size: 1.05em; color: white; }
+        
+        .formula { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); padding: 16px; border-radius: 12px; font-family: "Georgia", serif; font-style: italic; text-align: center; margin: 20px 0; color: white; font-size: 1.1em; backdrop-filter: blur(8px); }
+        
+        ul { padding-left: 24px; margin: 16px 0; }
+        li { margin-bottom: 10px; color: rgba(255, 255, 255, 0.95); }
+        li::marker { color: var(--accent); font-weight: bold; }
+        strong { color: white; }
+        
+        .btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0; justify-content: center; }
+        .btn-3d {
+            position: relative; padding: 14px 28px; font-size: 1em; font-weight: 600; color: white;
+            background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.15s ease; user-select: none;
+        }
+        .btn-3d:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15), 0 12px 28px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+        .btn-3d:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-3d.primary { background: linear-gradient(145deg, rgba(26,115,232,0.4), rgba(26,115,232,0.2)); border-color: rgba(26, 115, 232, 0.5); }
+        .btn-3d.success { background: linear-gradient(145deg, rgba(16,185,129,0.4), rgba(16,185,129,0.2)); border-color: rgba(16, 185, 129, 0.5); }
+        .btn-3d::after { content: ""; position: absolute; top: 4px; left: 4px; right: 4px; height: 40%; background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent); border-radius: 12px 12px 50% 50%; pointer-events: none; }
+
+        .progress-bar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(0, 0, 0, 0.15); border-radius: 12px; margin: 20px 0; }
+        .progress-bar span { color: white; font-weight: 500; }
+        .progress-track { flex: 1; height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--secondary)); border-radius: 4px; transition: width 1s ease; }
+        
+        .code-block-container { display: none; margin-top: 16px; animation: fadeIn 0.3s ease; }
+        .code-block-container.active { display: block; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .code-title { color: white; font-weight: 600; font-size: 0.95em; }
+        .copy-code-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8em; transition: all 0.2s; }
+        .copy-code-btn:hover { background: rgba(255,255,255,0.25); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .support-section { background: linear-gradient(145deg, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.15)); border: 2px solid rgba(236, 72, 153, 0.4); }
+        .support-header { text-align: center; margin-bottom: 24px; }
+        .support-header h2 { justify-content: center; font-size: 1.8em; margin-bottom: 8px; }
+        .support-header h2::before { content: "🤝"; margin-right: 10px; color: white; }
+        .heart-icon { font-size: 3em; text-align: center; margin: 16px 0; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .support-text { background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; margin: 16px 0; text-align: center; }
+        .phone-section { background: rgba(16, 185, 129, 0.15); border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; }
+        .phone-number { font-size: 1.8em; font-weight: bold; color: white; margin: 12px 0; font-family: "Fira Code", monospace; letter-spacing: 2px; }
+        .copy-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; margin: 8px; transition: all 0.2s; }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+        .support-features { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+        .feature-badge { background: rgba(16, 185, 129, 0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.85em; color: white; }
+        .catalog-link { background: linear-gradient(145deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; text-decoration: none; display: block; transition: all 0.3s; }
+        .catalog-link:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4); }
+        .catalog-link h3 { color: white; margin: 0 0 8px 0; font-size: 1.3em; }
+        .catalog-link h3::before { content: "🌟 "; }
+        .catalog-link p { color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 0.95em; }
+        .catalog-url { background: rgba(0, 0, 0, 0.3); padding: 8px 12px; border-radius: 8px; font-family: "Fira Code", monospace; font-size: 0.85em; color: #fbbf24; margin-top: 12px; display: inline-block; word-break: break-all; }
+        
+        .decorative-image { width: 100%; max-width: 600px; margin: 24px auto; display: block; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .glass-card { padding: 20px; border-radius: 16px; }
+            h1 { font-size: 1.5em; }
+            .btn-group { flex-direction: column; }
+            .btn-3d { width: 100%; justify-content: center; }
+            .phone-number { font-size: 1.4em; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Шапка -->
+    <div class="glass-card header-container">
+        <img src="favicon.ico" alt="Логотип" class="page-logo">
+        <div>
+            <h1>Урок 14: Диффузионные модели (Diffusion)</h1>
+            <div class="subtitle">ML-инженер • Блок 3: Современные тяжелые архитектуры</div>
+        </div>
+    </div>
+
+    <!-- Прогресс -->
+    <div class="glass-card progress-bar">
+        <span>Прогресс курса:</span>
+        <div class="progress-track"><div class="progress-fill"></div></div>
+        <span>14/25</span>
+    </div>
+
+    <!-- Введение -->
+    <div class="glass-card">
+        <p>Мы продолжаем изучение современных тяжелых архитектур. Текстовые нейросети предсказывают дискретные токены, а генераторы изображений работают в непрерывном пространстве пикселей. Диффузионные модели (DDPM, Stable Diffusion) произвели революцию в компьютерном зрении. Этот урок посвящен математической логике зашумления и созданию нейросети, предсказывающей шум.</p>
+
+        <div class="important">
+            <strong>🔑 Фундаментальный принцип диффузии:</strong> 
+            Процесс разделен на два этапа. В <em>прямом процессе</em> мы постепенно добавляем гауссов шум к исходному изображению за $T$ шагов, превращая его в чистый хаос. В <em>обратном процессе</em> обученная нейросеть пошагово удаляет предсказанный шум, буквально кристаллизуя новые осмысленные изображения из случайного шума.
+        </div>
+    </div>
+
+    <!-- Раздел 1 -->
+    <div class="glass-card">
+        <h2>1. Математика прямого зашумления (Трюк с ᾱ<sub>t</sub>)</h2>
+        <p>Если бы мы зашумляли картинку шаг за шагом в цикле, это заняло бы слишком много времени. Математика DDPM (Denoising Diffusion Probabilistic Models) позволяет получить зашумленное изображение на любом шаге времени $t$ напрямую через формулу:</p>
+        <div class="formula" style="margin-top: 12px;">
+            x<sub>t</sub> = √ᾱ<sub>t</sub> · x<sub>0</sub> + √(1 - ᾱ<sub>t</sub>) · ε, &nbsp;&nbsp; ε ~ 𝒩(0, I)
+        </div>
+        <p>Где $x_0$ — чистая картинка, $\epsilon$ — случайный шум, а $\bar{\alpha}_t$ — коэффициент расписания дисперсии, который определяет, сколько исходной информации осталось на шаге $t$.</p>
+    </div>
+
+    <!-- Раздел 2 -->
+    <div class="glass-card">
+        <h2>2. Реализация прямого зашумления (Пайплайн DDPM)</h2>
+        <p>Напишем код, который готовит обучающие примеры для нейросети: берет чистые картинки, выбирает для каждого случайный шаг времени $t$ и накладывает соответствующее количество шума.</p>
+
+        <pre><code>import torch
+import torch.nn as nn
+
+class DiffusionPipeline:
+    def __init__(self, num_timesteps=1000, beta_start=1e-4, beta_end=0.02):
+        self.num_timesteps = num_timesteps
+        
+        # Линейное расписание добавления шума (Betas)
+        self.betas = torch.linspace(beta_start, beta_end, num_timesteps)
+        
+        # Вычисляем производные коэффициенты (Alphas) по математическим формулам DDPM
+        self.alphas = 1.0 - self.betas
+        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0) # Тот самый ᾱ_t
+
+    def add_noise(self, x_0, t):
+        # x_0: исходные картинки формы [B, C, H, W]
+        # t: тензор случайных шагов времени формы [B]
+        batch_size = x_0.shape[0]
+        
+        # Генерируем чистый гауссов шум той же формы
+        noise = torch.randn_like(x_0)
+        
+        # Извлекаем нужные коэффициенты ᾱ_t для каждого элемента в батче
+        sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod[t]).view(-1, 1, 1, 1).to(x_0.device)
+        sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - self.alphas_cumprod[t]).view(-1, 1, 1, 1).to(x_0.device)
+        
+        # Прямое аналитическое зашумление по формуле
+        x_t = sqrt_alphas_cumprod * x_0 + sqrt_one_minus_alphas_cumprod * noise
+        
+        return x_t, noise</code></pre>
+    </div>
+
+    <!-- Раздел 3 -->
+    <div class="glass-card">
+        <h2>3. Архитектура U-Net и Time Embeddings</h2>
+        <p>Какую архитектуру использовать для удаления шума? Сеть должна принимать тензор формы `[B, C, H, W]` и возвращать тензор точно такой же формы (предсказанный шум). Стандартный выбор — архитектура <strong>U-Net</strong> со сквозными связями (Skip-connections) между энкодером и декодером.</p>
+        
+        <div class="warning">
+            <strong>⚠️ Главная архитектурная деталь:</strong> 
+            Нейросеть обязана знать, <em>насколько сильно</em> зашумлена картинка, которую ей подали на вход. Одно дело удалять легкую рябь на шаге $t=5$, другое — искать контуры в абсолютном хаосе на шаге $t=900$. Для этого шаг времени $t$ кодируется синусоидальным эмбеддингом (как позиции в трансформерах) и подмешивается в каждый сверточный блок U-Net.
+        </div>
+
+        <pre><code>class TimeEmbedding(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+        self.linear_1 = nn.Linear(dim // 4, dim)
+        self.activation = nn.SiLU()
+        self.linear_2 = nn.Linear(dim, dim)
+
+    def forward(self, t):
+        # Превращаем скалярное время t в синусоидальный вектор признаков
+        half_dim = self.dim // 8
+        emb = math.log(10000) / (half_dim - 1)
+        emb = torch.exp(torch.arange(half_dim, device=t.device) * -emb)
+        emb = t.unsqueeze(1) * emb.unsqueeze(0)
+        emb = torch.cat((torch.sin(emb), torch.cos(emb)), dim=-1)
+        
+        # Проекция через MLP блок
+        return self.linear_2(self.activation(self.linear_1(emb)))</code></pre>
+    </div>
+
+    <!-- Раздел 4 -->
+    <div class="glass-card">
+        <h2>4. Функция потерь диффузионных моделей</h2>
+        <p>Функция потерь в диффузии на удивление проста. Мы обучаем модель (обозначим её как $\epsilon_\theta$) минимизировать обычную среднеквадратичную ошибку (MSE) между реальным шумом $\epsilon$, который мы наложили в пайплайне, и шумом, который сеть разглядела в картинке $x_t$:</p>
+        <div class="formula" style="margin-top: 12px;">
+            ℒ<sub>simple</sub> = 𝔼<sub>t, x₀, ε</sub>[ ‖ ε - ε<sub>θ</sub>(x<sub>t</sub>, t) ‖² ]
+        </div>
+    </div>
+
+    <!-- Практика с РАБОТАЮЩИМИ кнопками -->
+    <div class="glass-card">
+        <h2>🎯 Практическое задание</h2>
+        <p>Напишите псевдокод тренировочного цикла для диффузионной модели на одну эпоху. Внутри цикла для каждого батча чистых картинок: 1) сгенерируйте случайный вектор времени <code>t</code>; 2) получите зашумленные картинки <code>x_t</code> и целевой шум с помощью класса <code>DiffusionPipeline</code>; 3) прогоните их через условную нейросеть <code>predicted_noise = model(x_t, t)</code>; 4) рассчитайте MSE-ошибку и вызовите <code>backward()</code>. Опишите словами, как изменится инференс (генерация с нуля), когда мы начнем цикл от $t = T-1$ до $0$.</p>
+        
+        <div class="btn-group">
+            <button class="btn-3d primary" onclick="toggleBlock('template-diff', this)">💻 Открыть шаблон кода</button>
+            <button class="btn-3d success" onclick="toggleBlock('solution-diff', this)">✅ Показать решение</button>
+            <button class="btn-3d" onclick="toggleBlock('theory-diff', this)">📚 Теория: Обратный процесс</button>
+        </div>
+
+        <!-- Блок 1: Шаблон -->
+        <div id="template-diff" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">📝 Шаблон (train_diffusion_starter.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-template-diff')">📋 Копировать</button>
+            </div>
+            <pre id="code-template-diff"><code>import torch
+import torch.nn as nn
+
+# pipeline = DiffusionPipeline(...)
+# model = UNetWithTimeEmbedding(...)
+# optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+
+def train_epoch(dataloader, pipeline, model, optimizer, device):
+    model.train()
+    total_loss = 0
+    
+    for batch in dataloader:
+        # batch: чистые картинки формы [B, C, H, W]
+        x_0 = batch.to(device)
+        batch_size = x_0.shape[0]
+        
+        # 1. Случайные шаги времени для каждого примера в батче
+        t = torch.randint(0, pipeline.num_timesteps, (batch_size,), device=device)
+        
+        # 2. Добавляем шум и получаем целевой шум
+        # ВАШ КОД ЗДЕСЬ: используйте pipeline.add_noise(...)
+        
+        # 3. Предсказываем шум через модель (передаем t как эмбеддинг)
+        # ВАШ КОД ЗДЕСЬ: predicted = model(x_t, t)
+        
+        # 4. Считаем MSE loss между реальным и предсказанным шумом
+        # ВАШ КОД ЗДЕСЬ: loss = F.mse_loss(predicted, target_noise)
+        
+        # 5. Обратный проход и обновление весов
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+        total_loss += loss.item()
+    
+    return total_loss / len(dataloader)
+
+# Инференс (генерация): опишите словами логику цикла от t=T-1 до 0</code></pre>
+        </div>
+
+        <!-- Блок 2: Решение -->
+        <div id="solution-diff" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">✅ Готовое решение (train_diffusion_solution.py)</span>
+                <button class="copy-code-btn" onclick="copyCode('code-solution-diff')">📋 Копировать</button>
+            </div>
+            <pre id="code-solution-diff"><code>import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+def train_epoch(dataloader, pipeline, model, optimizer, device):
+    model.train()
+    total_loss = 0
+    
+    for batch in dataloader:
+        x_0 = batch.to(device)
+        batch_size = x_0.shape[0]
+        
+        # 1. Случайные шаги времени
+        t = torch.randint(0, pipeline.num_timesteps, (batch_size,), device=device)
+        
+        # 2. Добавляем шум и получаем целевой шум
+        x_t, target_noise = pipeline.add_noise(x_0, t)
+        
+        # 3. Предсказываем шум через модель
+        predicted_noise = model(x_t, t)  # t автоматически конвертируется в эмбеддинг
+        
+        # 4. Считаем MSE loss
+        loss = F.mse_loss(predicted_noise, target_noise)
+        
+        # 5. Обратный проход
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+        total_loss += loss.item()
+    
+    return total_loss / len(dataloader)
+
+# Инференс (генерация с нуля):
+# 1. Начинаем с чистого шума: x_T ~ N(0, I)
+# 2. Для t от T-1 до 0:
+#    - Предсказываем шум: ε_θ(x_t, t)
+#    - Вычитаем предсказанный шум с учетом коэффициентов расписания
+#    - Добавляем небольшой шум (кроме шага t=0)
+# 3. Возвращаем очищенное изображение x_0</code></pre>
+        </div>
+
+        <!-- Блок 3: Теория -->
+        <div id="theory-diff" class="code-block-container">
+            <div class="code-header">
+                <span class="code-title">📚 Обратный процесс: от шума к изображению</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; color: rgba(255,255,255,0.95);">
+                <h3 style="margin-top: 0; color: white;">Как работает генерация?</h3>
+                <p>После обучения модель умеет предсказывать шум $\epsilon_\theta(x_t, t)$. Чтобы сгенерировать новое изображение, мы запускаем <strong>обратный диффузионный процесс</strong>:</p>
+                
+                <h4>🔑 Алгоритм сэмплирования:</h4>
+                <ol style="margin-left: 20px;">
+                    <li><strong>Старт:</strong> Берем чистый гауссов шум $x_T \sim \mathcal{N}(0, I)$</li>
+                    <li><strong>Цикл:</strong> Для $t = T-1, T-2, ..., 0$:
+                        <ul style="margin-left: 20px; margin-top: 8px;">
+                            <li>Предсказываем шум: $\hat{\epsilon} = \epsilon_\theta(x_t, t)$</li>
+                            <li>Вычисляем "очищенное" изображение, вычитая предсказанный шум</li>
+                            <li>Добавляем небольшой случайный шум (кроме последнего шага) для стохастичности</li>
+                        </ul>
+                    </li>
+                    <li><strong>Результат:</strong> $x_0$ — сгенерированное изображение</li>
+                </ol>
+
+                <div class="formula" style="text-align: left; padding: 16px; margin: 16px 0;">
+                    <strong>Упрощенная формула шага:</strong><br>
+                    x<sub>t-1</sub> = 1/√α<sub>t</sub> · (x<sub>t</sub> - (1-α<sub>t</sub>)/√(1-ᾱ<sub>t</sub>) · ε<sub>θ</sub>(x<sub>t</sub>, t)) + σ<sub>t</sub>z
+                </div>
+
+                <div class="important" style="margin-top: 16px;">
+                    <strong>💡 Почему это работает?</strong> 
+                    Модель учится "отменять" процесс зашумления. На ранних шагах ($t \approx T$) она удаляет крупномасштабный шум, формируя общие контуры. На поздних шагах ($t \approx 0$) — добавляет мелкие детали и текстуры. Это похоже на работу скульптора: от грубой формы к тонкой проработке.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция поддержки -->
+    <div class="glass-card support-section">
+        <div class="support-header"><h2>ПОДДЕРЖАТЬ ПРОЕКТ</h2></div>
+        <div class="heart-icon">💙</div>
+        <div class="support-text">
+            <p style="margin: 0; font-size: 1.1em;"><strong>Приложение бесплатное. Было и останется.</strong></p>
+            <p style="margin: 12px 0 0 0;">Если проект помог вам или вашим близким — можете поддержать разработку добровольным переводом.</p>
+        </div>
+        <div class="phone-section">
+            <h3 style="color: white; margin-bottom: 8px;">📱 ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА:</h3>
+            <div class="phone-number">8-920-227-56-76</div>
+            <button class="copy-btn" onclick="copyPhone()">📋 Копировать номер</button>
+            <div class="support-features">
+                <span class="feature-badge">✅ Мгновенно</span>
+                <span class="feature-badge">✅ Без комиссии</span>
+                <span class="feature-badge">✅ Безопасно</span>
+            </div>
+        </div>
+        <div style="text-align: center; margin: 20px 0;"><p style="font-size: 1.2em; color: white;"><strong>❤️ Спасибо за поддержку!</strong></p></div>
+        <a href="https://ancf-hue.github.io/" target="_blank" class="catalog-link">
+            <h3>Каталог бесплатных офлайн-приложений Anti-AI Shield</h3>
+            <p>Перейти в каталог</p>
+            <div class="catalog-url">https://ancf-hue.github.io/</div>
+        </a>
+        <img src="lesson-14-diffusion.png" alt="Diffusion Process Visualization" class="decorative-image">
+    </div>
+
+    <!-- Навигация -->
+    <div class="glass-card" style="text-align: center;">
+        <div class="btn-group" style="justify-content: center;">
+            <a href="lesson-13.html" class="btn-3d">◀ Назад</a>
+            <a href="lesson-15.html" class="btn-3d primary">Следующий урок ▶</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleBlock(id, btn) {
+            const block = document.getElementById(id);
+            const isActive = block.classList.contains('active');
+            document.querySelectorAll('.code-block-container').forEach(el => el.classList.remove('active'));
+            if (!isActive) {
+                block.classList.add('active');
+                if(btn.textContent.includes('Шаблон')) btn.textContent = '📖 Закрыть шаблон';
+                else if(btn.textContent.includes('Решение')) btn.textContent = '📖 Закрыть решение';
+                else if(btn.textContent.includes('Теория')) btn.textContent = '📖 Закрыть теорию';
+                else btn.textContent = '📖 Закрыть';
+            } else {
+                if(id === 'template-diff') btn.textContent = '💻 Открыть шаблон кода';
+                else if(id === 'solution-diff') btn.textContent = '✅ Показать решение';
+                else if(id === 'theory-diff') btn.textContent = '📚 Теория: Обратный процесс';
+            }
+        }
+
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector(`[onclick="copyCode('${elementId}')"]`);
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            }).catch(() => alert("Не удалось скопировать код."));
+        }
+
+        function copyPhone() {
+            const phone = "8-920-227-56-76";
+            navigator.clipboard.writeText(phone).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                btn.style.background = 'rgba(16, 185, 129, 0.4)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                }, 2000);
+            }).catch(() => alert("Не удалось скопировать номер."));
+        }
+
+        window.addEventListener('load', () => {
+            document.querySelector('.progress-fill').style.width = '56%';
+        });
+    </script>
+</body>
+</html>
